@@ -1,0 +1,101 @@
+diff -pruN a/codec_engine_2_24_01.orig/cetools/packages/ti/sdo/fc/dman3/package.xs b/codec_engine_2_24_01/cetools/packages/ti/sdo/fc/dman3/package.xs
+--- a/codec_engine_2_24_01.orig/cetools/packages/ti/sdo/fc/dman3/package.xs	2009-07-17 03:33:44.000000000 +0400
++++ b/codec_engine_2_24_01/cetools/packages/ti/sdo/fc/dman3/package.xs	2009-11-09 16:33:45.000000000 +0300
+@@ -40,6 +40,10 @@ function validate()
+ 
+     var suffix = Program.build.target.findSuffix(this); 
+ 
++    if (suffix == null) {
++        return;
++    }
++
+     if (!(suffix.match(/64P/)) && (!(suffix.match(/674/))) &&
+             (this.DMAN3.useExternalRM == true)) {
+        throw("\n\n  DMAN3 Error: Configured DMAN3.useExternalRM = true for " +
+diff -pruN a/codec_engine_2_24_01.orig/config.bld b/codec_engine_2_24_01/config.bld
+--- a/codec_engine_2_24_01.orig/config.bld	1970-01-01 03:00:00.000000000 +0300
++++ b/codec_engine_2_24_01/config.bld	2009-11-09 16:33:45.000000000 +0300
+@@ -0,0 +1,44 @@
++/* enable any interesting diagnostics for the TI toolchain */
++var remarks = " -pden -pds=195 ";
++ 
++/* ======== ti.targets.C64P ======== */
++var C64P = xdc.useModule('ti.targets.C64P');
++C64P.rootDir = "" + java.lang.System.getenv("CODEGEN_INSTALL_DIR");
++C64P.ccOpts.prefix += remarks;
++ 
++C64P.platforms = [
++   "ti.platforms.evm3530"
++];
++ 
++delete C64P.profiles["coverage"];
++delete C64P.profiles["profile"];
++delete C64P.profiles["whole_program"];
++delete C64P.profiles["whole_program_debug"];
++ 
++Build.targets.$add(C64P);
++ 
++/* ======== gnu.targets.arm.GCArmv5T ======== */
++var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
++GCArmv5T.rootDir = "" +  java.lang.System.getenv("ANDROID_TOOLCHAIN");
++GCArmv5T.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
++
++GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
++
++GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
++
++GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++
++GCArmv5T.platforms = [
++    "ti.platforms.evm3530"
++];
++delete GCArmv5T.profiles["coverage"];
++delete GCArmv5T.profiles["profile"];
++ 
++Build.targets.$add(GCArmv5T);
++ 
++/*
++ * Add this libvers.xdt template to each package being built to auto-generate
++ * symbols used internally to determine compatibility between SW running on
++ * different devices.
++ */
++Pkg.libTemplate = "ti/sdo/ce/utils/libvers.xdt";
+diff -pruN a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/GT_config_posix.c b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
+--- a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/GT_config_posix.c	2009-07-25 08:35:31.000000000 +0400
++++ b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/GT_config_posix.c	2009-11-09 16:34:56.000000000 +0300
+@@ -129,7 +129,9 @@ Int GTConfig_posixInit(Void)
+         /* initialize mutex */
+         pthread_mutexattr_init(&mattrs);
+         /* "adaptive" below means "fast", as opposed to "recursive" */
++#ifndef _ANDROID_
+         pthread_mutexattr_settype(&mattrs, PTHREAD_MUTEX_ADAPTIVE_NP);
++#endif
+         pthread_mutex_init(&mutex,  &mattrs);
+ 
+         /* call Global_atexit() to schedule our cleanup. Global module
+diff -pruN a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/Thread_posix.c b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/Thread_posix.c
+--- a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/Thread_posix.c	2009-07-25 08:35:32.000000000 +0400
++++ b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/Thread_posix.c	2009-11-09 16:36:14.000000000 +0300
+@@ -159,7 +159,9 @@ Void Thread_delete(Thread_Handle task)
+             if (cancel) {
+                 int result;
+ 
++#ifndef _ANDROID_
+                 result = pthread_cancel(task->pthread);
++#endif
+                 GT_1trace(curTrace, GT_4CLASS, "Thread_delete> pthread_cancel "
+                     "(0x%x)\n", result);
+                 result = pthread_join(task->pthread, NULL);
+@@ -328,10 +330,12 @@ static void runStub(Thread_Obj *task)
+ {
+     pthread_setspecific(taskKey, task);
+ 
++#ifndef _ANDROID_
+     /* PTHREAD_CANCEL_ASYNCHRONOUS is potentially dangerous: this allows
+      * the thread to be cancelled in the middle of malloc, for example.
+      */
+     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
++#endif
+ 
+     task->exitStatus = (Int)task->fxn(
+         task->args[0], task->args[1], task->args[2], task->args[3],

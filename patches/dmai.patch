@@ -1,0 +1,41 @@
+diff -pruN a/dmai_2_00_01_04/packages/config.bld b/dmai_2_00_01_04/packages/config.bld
+--- a/dmai_2_00_01_04/packages/config.bld	2009-10-30 18:53:14.000000000 +0300
++++ b/dmai_2_00_01_04/packages/config.bld	2009-10-30 19:11:15.000000000 +0300
+@@ -73,5 +73,6 @@ GCArmv5T.LONGNAME = longName;
+ GCArmv5T.platform = java.lang.System.getenv("PLATFORM_XDC");
+ GCArmv5T.rootDir = tooldir;
+ 
++GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
+ Build.targets = [
+ ];
+diff -pruN a/dmai_2_00_01_04/packages/ti/sdo/dmai/apps/Makefile.app b/dmai_2_00_01_04/packages/ti/sdo/dmai/apps/Makefile.app
+--- a/dmai_2_00_01_04/packages/ti/sdo/dmai/apps/Makefile.app	2009-10-30 18:53:12.000000000 +0300
++++ b/dmai_2_00_01_04/packages/ti/sdo/dmai/apps/Makefile.app	2009-10-30 19:11:14.000000000 +0300
+@@ -114,13 +114,13 @@ CONFIGURO_BIOS	= $(PRE) $(XDC_INSTALL_DI
+ 
+ CPP_FLAGS	+= $(PLATFORM_CPPFLAGS)
+ 
+-GCC_C_FLAGS 	= $(C_FLAGS) -Wall -Werror
++GCC_C_FLAGS 	= $(C_FLAGS) -Wall -Werror $(ANDROID_CFLAGS)
+ C64P_C_FLAGS	= $(C_FLAGS)
+ 
+ GCC_CPP_FLAGS  	= $(CPP_FLAGS) -I$(LINUXKERNEL_INSTALL_DIR)/include
+ C64P_CPP_FLAGS	= $(CPP_FLAGS) -pdse225 -I$(CODEGEN_INSTALL_DIR)/include -mv6400+ -I$(BIOS_INSTALL_DIR)/packages/ti/bios/include -eo$(PLATFORM_DEVICE).o$(EXT)
+ 
+-GCC_LD_FLAGS	= $(LD_FLAGS) -lpthread -lm -L$(LINUXLIBS_INSTALL_DIR)/lib -lasound
++GCC_LD_FLAGS	= $(LD_FLAGS) -lm -L$(LINUXLIBS_INSTALL_DIR)/lib -lasound $(ANDROID_LDFLAGS)
+ C64P_LD_FLAGS	= $(LD_FLAGS) -z -w -x -c -i$(RTDX_INSTALL_DIR)/packages/ti/rtdx/iom/lib/debug -i$(RTDX_INSTALL_DIR)/packages/ti/rtdx/cio/lib/release -i$(RTDX_INSTALL_DIR)/packages/ti/rtdx/lib/c6000 
+ 
+ SOURCES 	= $(wildcard *.c)
+diff -pruN a/dmai_2_00_01_04/packages/ti/sdo/dmai/Makefile b/dmai_2_00_01_04/packages/ti/sdo/dmai/Makefile
+--- a/dmai_2_00_01_04/packages/ti/sdo/dmai/Makefile	2009-10-30 18:53:12.000000000 +0300
++++ b/dmai_2_00_01_04/packages/ti/sdo/dmai/Makefile	2009-10-30 19:11:14.000000000 +0300
+@@ -106,7 +106,7 @@ CPP_FLAGS	+= -I$(XDC_INSTALL_DIR)/packag
+ GCC_CPP_FLAGS	+= $(CPP_FLAGS) -I$(LINUXKERNEL_INSTALL_DIR)/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/$(PLATFORM_ARCH)/include $(HAVE_AUTOCONFIG) -I$(CMEM_INSTALL_DIR)/packages -I$(LINK_INSTALL_DIR)/packages -DDmai_BuildOs_linux -Dxdc_target_types__=gnu/targets/std.h -I$(LINUXLIBS_INSTALL_DIR)/include -Dxdc_target_name__=arm/GCArmv5T
+ C64P_CPP_FLAGS	+= $(CPP_FLAGS) -I$(BIOS_INSTALL_DIR)/packages/ti/bios/include -I$(BIOS_INSTALL_DIR)/packages -DDmai_BuildOs_bios -Dxdc_target__='<ti/targets/std.h>' -I$(CODEGEN_INSTALL_DIR)/include -mv6400+ -pdse225 -eo$(PLATFORM_DEVICE).o$(EXT)
+ 
+-GCC_C_FLAGS	+= $(C_FLAGS) -Wall -Werror
++GCC_C_FLAGS	+= $(C_FLAGS) -Wall -Werror $(ANDROID_CFLAGS)
+ C64P_C_FLAGS	+= $(C_FLAGS)
+ 
+ GNU_AR_FLAGS	+= $(AR_FLAGS)

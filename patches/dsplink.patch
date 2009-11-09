@@ -1,0 +1,34 @@
+diff -pruN a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/api/Linux/_notify.c b/dsplink_1_61_03/packages/dsplink/gpp/src/api/Linux/_notify.c
+--- a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/api/Linux/_notify.c	2009-04-17 05:20:55.000000000 +0400
++++ b/dsplink_1_61_03/packages/dsplink/gpp/src/api/Linux/_notify.c	2009-11-09 16:39:14.000000000 +0300
+@@ -327,10 +327,12 @@ NOTIFY_eventWorker (IN OPT void * arg)
+         pthread_exit (NULL) ;
+     }
+ 
++#ifndef _ANDROID_
+     if (pthread_sigmask (SIG_BLOCK, &blockSet, NULL) != 0) {
+         perror ("Event worker thread error in setting sigmask") ;
+         pthread_exit (NULL) ;
+     }
++#endif
+ 
+     drvHandle = open (LINK_DRIVER, O_RDWR | O_SYNC) ;
+     if (drvHandle < 0) {
+diff -pruN a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/Makefile_kbuild b/dsplink_1_61_03/packages/dsplink/gpp/src/Makefile_kbuild
+--- a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/Makefile_kbuild	2009-04-17 05:21:01.000000000 +0400
++++ b/dsplink_1_61_03/packages/dsplink/gpp/src/Makefile_kbuild	2009-11-09 16:38:40.000000000 +0300
+@@ -120,12 +120,14 @@ debug:
+ 	$(shell echo $(addprefix -D, $(TI_DSPLINK_GPP_DEFINES)) > PMGR_defines.txt)
+ 	$(MAKE) PROFILE=DEBUG -C $(KERNEL_DIR) SUBDIRS=$(PWD) $(MAKE_OPTS) modules
+ 	mv dsplinkk.ko Module.symvers PMGR_includes.txt PMGR_defines.txt  $(TI_DSPLINK_GPPROOT)$(DIRSEP)export$(DIRSEP)BIN$(DIRSEP)$(TI_DSPLINK_GPPOSPREFIX)Linux$(DIRSEP)$(TI_DSPLINK_PLATFORM)$(DIRSEP)DEBUG
++	$(MAKE) PROFILE=DEBUG -C api
+ 
+ release:
+ 	$(shell echo $(addprefix -I, $(TI_DSPLINK_GPP_INC_PATH)) > PMGR_includes.txt)
+ 	$(shell echo $(addprefix -D, $(TI_DSPLINK_GPP_DEFINES)) > PMGR_defines.txt)
+ 	$(MAKE) PROFILE=RELEASE -C $(KERNEL_DIR) SUBDIRS=$(PWD) $(MAKE_OPTS) modules
+ 	mv dsplinkk.ko Module.symvers PMGR_includes.txt PMGR_defines.txt  $(TI_DSPLINK_GPPROOT)$(DIRSEP)export$(DIRSEP)BIN$(DIRSEP)$(TI_DSPLINK_GPPOSPREFIX)Linux$(DIRSEP)$(TI_DSPLINK_PLATFORM)$(DIRSEP)RELEASE
++	$(MAKE) PROFILE=RELEASE -C api
+ 
+ clean:
+ 	find $(DSPLINK) -name "*.o" -exec rm {} \;
