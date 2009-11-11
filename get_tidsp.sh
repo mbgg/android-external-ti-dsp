@@ -40,6 +40,12 @@ then
 	wget http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/latest/exports/TI-C6x-CGT-v6.0.16.1.bin
 fi
 
+# Checking ti gstreamer plugins
+if ! [ -e gstreamer_ti ]
+then
+	svn checkout -r 506 --username anonymous --password "" -q https://gstreamer.ti.com/svn/gstreamer_ti/trunk/gstreamer_ti
+fi
+
 #### Checking md5 sums ####
 echo "Checking md5 sums..."
 
@@ -97,6 +103,7 @@ echo "Installing DVSDK..."
 ./bios_setuplinux_5_33_06.bin --S --prefix "$install_dir"/dvsdk_3_00_02_44
 ./install_cg6x.exp &> /dev/null
 tar zxvf codec_engine_2_24_01.tar.gz -C "$install_dir"/dvsdk_3_00_02_44 &> /dev/null
+mv gstreamer_ti "$install_dir"/dvsdk_3_00_02_44
 cd -
 
 #### Patching ####
@@ -107,4 +114,5 @@ ln -s "../gt_dais.h" codec_engine_2_24_01/cetools/packages/ti/sdo/fc/utils/gtinf
 patch -p1 < "$patch_dir"/dmai.patch
 patch -p1 < "$patch_dir"/dsplink.patch
 patch -p1 < "$patch_dir"/codec_engine.patch
+patch -p1 < "$patch_dir"/gst_ti.patch
 cd -

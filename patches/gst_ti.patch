@@ -1,0 +1,388 @@
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/config.h b/gstreamer_ti/ti_build/ticodecplugin/config.h
+--- a/gstreamer_ti/ti_build/ticodecplugin/config.h	1970-01-01 03:00:00.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/config.h	2009-11-10 21:16:31.000000000 +0300
+@@ -0,0 +1,62 @@
++/* config.h.  Generated from config.h.in by configure.  */
++/* config.h.in.  Generated from configure.ac by autoheader.  */
++
++/* Define the version */
++#define GST_PLUGIN_VERSION "0.10.0.1"
++
++/* Define the release version */
++#define GST_PLUGIN_VERSION_RELEASE "0.20091105.141912"
++
++/* Define to 1 if you have the <dlfcn.h> header file. */
++#define HAVE_DLFCN_H 1
++
++/* Define to 1 if you have the <inttypes.h> header file. */
++#define HAVE_INTTYPES_H 1
++
++/* Define to 1 if you have the <memory.h> header file. */
++#define HAVE_MEMORY_H 1
++
++/* Define to 1 if you have the <stdint.h> header file. */
++#define HAVE_STDINT_H 1
++
++/* Define to 1 if you have the <stdlib.h> header file. */
++#define HAVE_STDLIB_H 1
++
++/* Define to 1 if you have the <strings.h> header file. */
++#define HAVE_STRINGS_H 1
++
++/* Define to 1 if you have the <string.h> header file. */
++#define HAVE_STRING_H 1
++
++/* Define to 1 if you have the <sys/stat.h> header file. */
++#define HAVE_SYS_STAT_H 1
++
++/* Define to 1 if you have the <sys/types.h> header file. */
++#define HAVE_SYS_TYPES_H 1
++
++/* Define to 1 if you have the <unistd.h> header file. */
++#define HAVE_UNISTD_H 1
++
++/* Name of package */
++#define PACKAGE "gstticodecplugin"
++
++/* Define to the address where bug reports for this package should be sent. */
++#define PACKAGE_BUGREPORT ""
++
++/* Define to the full name of this package. */
++#define PACKAGE_NAME ""
++
++/* Define to the full name and version of this package. */
++#define PACKAGE_STRING ""
++
++/* Define to the one symbol short name of this package. */
++#define PACKAGE_TARNAME ""
++
++/* Define to the version of this package. */
++#define PACKAGE_VERSION ""
++
++/* Define to 1 if you have the ANSI C header files. */
++/* #undef STDC_HEADERS */
++
++/* Version number of package */
++#define VERSION "0.10.0.1"
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld b/gstreamer_ti/ti_build/ticodecplugin/src/config.bld
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/config.bld	2009-11-10 21:16:27.000000000 +0300
+@@ -13,12 +13,28 @@ var C64P = xdc.useModule('ti.targets.C64
+ C64P.rootDir = "/opt/dmsw/cg6x_6_0_16/";
+ C64P.platform = "ti.platforms.evmDM6446"; 
+ 
++var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
++GCArmv5T.rootDir = "" + java.lang.System.getenv("MVTOOL_DIR");
++GCArmv5T.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
++
++GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
++
++GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
++GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++
++GCArmv5T.platforms = [
++    "ti.platforms.evm3530"
++];
++
++Build.targets.$add(GCArmv5T);
++
+ /*
+  *  ======== Build.targets ========
+  * list of targets (ISAs + compilers) to build for
+  */
++/*
+ Build.targets = [
+     C64P,
+ ];
+-
++*/
+ 
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c	2009-11-10 23:05:18.000000000 +0300
+@@ -858,12 +858,14 @@ static gboolean gst_tiauddec1_init_audio
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiauddec1_exit_audio(auddec1);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c	2009-11-10 23:06:10.000000000 +0300
+@@ -854,12 +854,14 @@ static gboolean gst_tiauddec_init_audio(
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiauddec_exit_audio(auddec);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c	2009-11-10 23:07:01.000000000 +0300
+@@ -786,12 +786,14 @@ static gboolean gst_tiaudenc1_init_audio
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiaudenc1_exit_audio(audenc1);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg b/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg	2009-11-10 21:16:19.000000000 +0300
+@@ -32,11 +32,14 @@ var demoEngine = Engine.createFromServer
+     "ti.sdo.server.cs"
+     );
+ 
+-var combopath = "" + java.lang.System.getenv("CODEC_SERVER");
+-if (combopath != "" && combopath != "null") {
+-	demoEngine.server = java.lang.System.getenv("CODEC_SERVER");
+-}
+-
++/*
++ * var combopath = "" + java.lang.System.getenv("CODEC_SERVER");
++ * if (combopath != "" && combopath != "null") {
++ *	demoEngine.server = java.lang.System.getenv("CODEC_SERVER");
++ * }
++ */
++demoEngine.server = "/system/ti-dsp/cs.x64P";
++ 
+ /* Load support for the DMAI module */
+ var DMAI = xdc.loadPackage('ti.sdo.dmai');
+ 
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c	2009-11-10 23:07:48.000000000 +0300
+@@ -1008,12 +1008,14 @@ static gboolean gst_tiimgdec1_init_image
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiimgdec1_exit_image(imgdec1);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c	2009-11-10 23:08:24.000000000 +0300
+@@ -1009,12 +1009,14 @@ static gboolean gst_tiimgdec_init_image(
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiimgdec_exit_image(imgdec);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c	2009-11-10 23:09:13.000000000 +0300
+@@ -1315,12 +1315,14 @@ static gboolean gst_tiimgenc1_init_image
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiimgenc1_exit_image(imgenc1);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c	2009-11-10 23:09:41.000000000 +0300
+@@ -1313,12 +1313,14 @@ static gboolean gst_tiimgenc_init_image(
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tiimgenc_exit_image(imgenc);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c	2009-11-10 23:10:16.000000000 +0300
+@@ -906,12 +906,14 @@ static gboolean gst_tividdec2_init_video
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tividdec2_exit_video(viddec2);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c	2009-11-10 23:10:45.000000000 +0300
+@@ -884,12 +884,14 @@ static gboolean gst_tividdec_init_video(
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tividdec_exit_video(viddec);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c	2009-11-10 23:11:30.000000000 +0300
+@@ -1200,12 +1200,14 @@ static gboolean gst_tividenc1_init_video
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tividenc1_exit_video(videnc1);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c	2009-11-10 21:07:20.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c	2009-11-10 23:11:59.000000000 +0300
+@@ -976,12 +976,14 @@ static gboolean gst_tividenc_init_video(
+         return FALSE;
+     }
+ 
++#ifndef _ANDROID_
+     /* Force the thread to use custom scheduling attributes */
+     if (pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED)) {
+         GST_WARNING("failed to set schedule inheritance attribute\n");
+         gst_tividenc_exit_video(videnc);
+         return FALSE;
+     }
++#endif
+ 
+     /* Set the thread to be fifo real time scheduled */
+     if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
+diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/Makefile b/gstreamer_ti/ti_build/ticodecplugin/src/Makefile
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/Makefile	1970-01-01 03:00:00.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/Makefile	2009-11-10 21:16:32.000000000 +0300
+@@ -0,0 +1,64 @@
++XDC_CONFIG_BASENAME = gstticodecplugin_$(PLATFORM)
++CONFIGURO     = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
++BUILT_SOURCES = $(XDC_CONFIG_BASENAME)/compiler.opt $(XDC_CONFIG_BASENAME)/linker.cmd
++XDC_PATH      = .;$(XDC_INSTALL_DIR)/packages;$(LINK_INSTALL_DIR)/packages;$(FC_INSTALL_DIR)/packages;$(CE_INSTALL_DIR)/packages;$(XDAIS_INSTALL_DIR)/packages;$(CODEC_INSTALL_DIR)/packages;$(CMEM_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(LPM_INSTALL_DIR)/packages;$(XDC_USER_PATH);$(EDMA3_LLD_INSTALL_DIR)/packages;
++
++gstticodecplugin_objs = \
++	gsttiauddec1.o \
++	gsttiauddec.o \
++	gsttiaudenc1.o \
++	gstticircbuffer.o \
++	gstticodecplugin.o \
++	gstticodecs.o \
++	gstticodecs_platform.o \
++	gstticommonutils.o \
++	gsttidmaibuffertransport.o \
++	gsttidmaiperf.o \
++	gsttidmaivideosink.o \
++	gsttiimgdec1.o \
++	gsttiimgdec.o \
++	gsttiimgenc1.o \
++	gsttiimgenc.o \
++	gsttiquicktime_aac.o \
++	gsttiquicktime_h264.o \
++	gsttividdec2.o \
++	gsttividdec.o \
++	gsttividenc1.o \
++	gsttividenc.o \
++	gsttividresize.o
++
++xdc_config:
++	XDCPATH="$(XDC_PATH)" $(CONFIGURO) -c $(MVTOOL_DIR) -o  $(XDC_CONFIG_BASENAME) -t $(XDC_TARGET) -p $(XDC_PLATFORM) -b $(GST_INSTALL_DIR)/ticodecplugin/src/config.bld gstticodecplugin_$(PLATFORM).cfg
++
++COMPILER_OPT = $(shell cat $(XDC_CONFIG_BASENAME)/compiler.opt)
++
++all: xdc_config
++	ln -f -s gstticodecs_$(PLATFORM).c gstticodecs_platform.c \
++
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gstticodecplugin.o gstticodecplugin.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiauddec.o gsttiauddec.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiauddec1.o gsttiauddec1.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttividdec.o gsttividdec.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttividdec2.o gsttividdec2.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiimgenc1.o gsttiimgenc1.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiimgenc.o gsttiimgenc.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiimgdec1.o gsttiimgdec1.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiimgdec.o gsttiimgdec.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttidmaibuffertransport.o gsttidmaibuffertransport.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gstticircbuffer.o gstticircbuffer.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttidmaivideosink.o gsttidmaivideosink.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gstticodecs.o gstticodecs.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gstticodecs_platform.o gstticodecs_platform.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiquicktime_aac.o gsttiquicktime_aac.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiquicktime_h264.o gsttiquicktime_h264.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttividenc.o gsttividenc.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttividenc1.o gsttividenc1.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttiaudenc1.o gsttiaudenc1.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gstticommonutils.o gstticommonutils.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttividresize.o gsttividresize.c
++	$(CC) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o gsttidmaiperf.o gsttidmaiperf.c \
++
++	$(CXX) $(LDFLAGS) $(gstticodecplugin_objs) -T $(XDC_CONFIG_BASENAME)/linker.cmd -Wl,-soname -Wl,libgstticodecplugin.so -o libgstticodecplugin.so
++
++clean:
++	rm -rf *.o *.so gstticodecplugin_$(PLATFORM)

@@ -17,6 +17,8 @@ ifeq ($(ANDROID_PLATFORM),OMAP3530)
 	DSPLINK_ARCH:=OMAP3530
 	LPM_ARCH:=omap3530
 	LPM_MODULE:=lpm_omap3530.ko
+	GST_PLATFORM:=omap3530
+	GST_XDC_PLATFORM:=evm3530
 endif
 #############################################################################################
 
@@ -65,6 +67,9 @@ DVSDK_DEMOS_INSTALL_DIR := $(PATH_TO_SDK)/dvsdk_demos_3_00_01_13
 #-------------- XDC Tools -------------------
 XDC_INSTALL_DIR := $(PATH_TO_SDK)/xdctools_3_15_01_59
 XDCPATH := "$(PATH_TO_SDK);$(XDAIS_INSTALL_DIR)/packages;$(FC_INSTALL_DIR)/packages;$(BIOS_INSTALL_DIR)/packages;$(DSPLINK_INSTALL_DIR)/packages;$(CE_INSTALL_DIR)/packages;$(CE_INSTALL_DIR)/cetools/packages;$(BIOSUTILS_INSTALL_DIR)/packages;$(LPM_INSTALL_DIR)/packages"
+
+#-------------- Gstreamer PLugins ------------
+GST_INSTALL_DIR := $(PATH_TO_SDK)/gstreamer_ti
 
 #-------------- Bionic tools -----------------
 ANDROID_TOOLCHAIN := $(ANDROID_ROOT_DIR)/$($(combo_target)TOOLS_PREFIX)
@@ -132,12 +137,12 @@ BUILD_OPTIONS= \
 export ANDROID_TOOLCHAIN_PATH ANDROID_TOOLCHAIN_PREFIX ANDROID_TOOLCHAIN_LONGNAME ANDROID_TOOLCHAIN BIONIC_LIBC_INCS
 
 ifeq ($(ANDROID_PLATFORM),OMAP3530)
-all: clean dsplink_config dsplink_build dsplink_dsp cmem_build sdma_build ce_build fc_build cs_build dmai_build lpm_build install
+all: clean dsplink_config dsplink_build dsplink_dsp cmem_build sdma_build ce_build fc_build cs_build dmai_build lpm_build ti_gst install
 else
 $(error "Not supported platform!")
 endif
 
-clean: dsplink_clean dsplink_dsp_clean cmem_clean cs_clean dmai_clean lpm_clean fc_clean ce_clean sdma_clean
+clean: dsplink_clean dsplink_dsp_clean cmem_clean cs_clean dmai_clean lpm_clean fc_clean ce_clean sdma_clean ti_gst_clean
 
 
 # DSPlink
@@ -290,6 +295,51 @@ lpm_clean:
 	LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) MVTOOL_PREFIX=$(CSTOOL_PREFIX) \
 	DSPLINK_REPO=$(DSPLINK_INSTALL_DIR)/packages clean
 
+# Gstreamer plugin
+ti_gst:
+	make -C $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src PLATFORM=$(GST_PLATFORM) \
+	XDC_TARGET=gnu.targets.arm.GCArmv5T \
+	XDC_PLATFORM=ti.platforms.$(GST_XDC_PLATFORM) \
+	PLATFORM_XDC=${XDC_PLATFORM} \
+	MVTOOL_DIR=$(ANDROID_TOOLCHAIN_PATH) \
+	ANDROID_TOOLCHAIN_LONGNAME=$(ANDROID_TOOLCHAIN_LONGNAME) \
+	CC=$(ANDROID_TOOLCHAIN)gcc \
+	CXX=$(ANDROID_TOOLCHAIN)g++ \
+	CE_INSTALL_DIR=$(CE_INSTALL_DIR) \
+	CODEC_INSTALL_DIR=$(CODEC_INSTALL_DIR) \
+	LINK_INSTALL_DIR=$(DSPLINK_INSTALL_DIR) \
+	CMEM_INSTALL_DIR=$(LINUXUTILS_INSTALL_DIR) \
+	FC_INSTALL_DIR=$(FC_INSTALL_DIR) \
+	LPM_INSTALL_DIR=$(LPM_INSTALL_DIR) \
+	XDAIS_INSTALL_DIR=$(XDAIS_INSTALL_DIR) \
+	BIOS_INSTALL_DIR=$(BIOS_INSTALL_DIR) \
+	LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
+	DMAI_INSTALL_DIR=$(DMAI_INSTALL_DIR) \
+	XDC_INSTALL_DIR=$(XDC_INSTALL_DIR) \
+	GST_INSTALL_DIR=$(GST_INSTALL_DIR)/ti_build \
+	ANDROID_CFLAGS="$(BIONIC_LIBC_INCS) $(ANDROID_CC_FLAGS)" \
+	CFLAGS="-DDAVINCI_LSP_WORKAROUND -DPlatform_$(GST_PLATFORM) -I.. \
+		$(BIONIC_LIBC_INCS) $(ANDROID_CC_FLAGS) \
+		-I$(ANDROID_ROOT_DIR)/external/gstreamer \
+		-I$(ANDROID_ROOT_DIR)/external/glib/glib \
+		-I$(ANDROID_ROOT_DIR)/external/glib \
+		-I$(ANDROID_ROOT_DIR)/external/glib/android \
+		-I$(ANDROID_ROOT_DIR)/external/gstreamer/gst/android \
+		-I$(ANDROID_ROOT_DIR)/external/glib/gmodule \
+		-I$(ANDROID_ROOT_DIR)/external/gst-plugins-base/gst-libs \
+		-I$(ANDROID_ROOT_DIR)/external/gstreamer/libs \
+		-I/$(ANDROID_ROOT_DIR)/external/gst-plugins-base/gst-libs/gst/video/android" \
+	LDFLAGS="-nostdlib -Wl,-soname,libagl.so -Wl,-T,$(ANDROID_ROOT_DIR)/build/core/armelf.xsc \
+		-Wl,--gc-sections -Wl,-shared,-Bsymbolic -Wl,--whole-archive -Wl,--no-whole-archive \
+		-lc -lstdc++ -lm -Wl,--no-undefined \
+		-L$(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/obj/lib \
+		-lgstreamer-0.10 -lgstaudio-0.10 -lgstvideo-0.10 -lgstbase-0.10 -lgsttag-0.10 \
+		-lglib-2.0 -lgthread-2.0 -lgmodule-2.0 -lgobject-2.0" \
+	all
+
+ti_gst_clean:
+	make -C $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src clean PLATFORM=$(GST_PLATFORM)
+
 install:
 	mkdir $(DVSDK_INSTALL_DIR) -p
 	cp $(DSPLINK_INSTALL_DIR)/packages/dsplink/gpp/export/BIN/Linux/$(DSPLINK_ARCH)/RELEASE/dsplinkk.ko $(DVSDK_INSTALL_DIR)
@@ -297,4 +347,4 @@ install:
 	cp $(CE_INSTALL_DIR)/cetools/packages/ti/sdo/linuxutils/cmem/src/module/cmemk.ko $(DVSDK_INSTALL_DIR)
 	cp $(CE_INSTALL_DIR)/cetools/packages/ti/sdo/linuxutils/sdma/src/module/sdmak.ko $(DVSDK_INSTALL_DIR)
 	cp $(CODEC_INSTALL_DIR)/packages/ti/sdo/server/cs/bin/cs.x64P $(DVSDK_INSTALL_DIR)
-
+	cp $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src/libgstticodecplugin.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/plugins
