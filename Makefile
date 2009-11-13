@@ -137,7 +137,7 @@ BUILD_OPTIONS= \
 export ANDROID_TOOLCHAIN_PATH ANDROID_TOOLCHAIN_PREFIX ANDROID_TOOLCHAIN_LONGNAME ANDROID_TOOLCHAIN BIONIC_LIBC_INCS
 
 ifeq ($(ANDROID_PLATFORM),OMAP3530)
-all: clean dsplink_config dsplink_build dsplink_dsp cmem_build sdma_build ce_build fc_build cs_build dmai_build lpm_build ti_gst install
+all: dsplink_config dsplink_build dsplink_dsp cmem_build sdma_build ce_build fc_build cs_build dmai_build lpm_build ti_gst install
 else
 $(error "Not supported platform!")
 endif
