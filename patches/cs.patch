@@ -1,0 +1,38 @@
+diff -pruN a/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/package.xs b/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/package.xs
+--- a/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/package.xs	2009-07-25 02:03:14.000000000 +0400
++++ b/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/package.xs	2009-12-07 17:05:58.000000000 +0300
+@@ -17,6 +17,7 @@ function validate() {
+          validate_one_codec( "ti.sdo.codecs.mpeg2dec", "MPEG2DEC" );
+          validate_one_codec( "ti.sdo.codecs.mpeg4dec", "MPEG4DEC" );
+          validate_one_codec( "ti.sdo.codecs.mpeg4enc", "MPEG4ENC" );
++	 validate_one_codec( "ti.sdo.codecs.mp3dec", "MP3DEC" );
+ }
+ 
+ function validate_one_codec( packageName, moduleName ) {
+diff -pruN a/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/codec.cfg b/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/codec.cfg
+--- a/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/codec.cfg	2009-07-25 02:03:14.000000000 +0400
++++ b/cs1omap3530_1_00_01/packages/ti/sdo/server/cs/codec.cfg	2009-12-07 17:05:58.000000000 +0300
+@@ -92,6 +92,13 @@ var GROUP_1 = 1;
+                 MPEG4ENC.alg.udataSection = "DDR2";
+                 MPEG4ENC.alg.dataSection = "DDR2";
+ 
++    var MP3DEC = xdc.useModule('ti.sdo.codecs.mp3dec.ce.MP3DEC');
++//		MP3DEC.alg.watermark      = true; /*if it is evaluation version */
++		MP3DEC.alg.watermark      = false; /*if it is production version.*/
++		MP3DEC.alg.codeSection  = "DDR2";
++		MP3DEC.alg.dataSection  = "DDR2";
++		MP3DEC.alg.udataSection = "DDR2";
++
+ /*
+  * The array of algorithms this server can serve up.  This array also
+  * configures details about the threads which will be created to run the
+@@ -148,6 +155,9 @@ Server.algs = [ 
+         groupId : 0,
+     },
+ 
++    {name: "mp3dec", mod: MP3DEC,threadAttrs: {
++        stackMemId: 0, priority: Server.MINPRI + 2}, groupId : 1,
++    },
+ ];
+ 
+ var DSKT2 = xdc.useModule('ti.sdo.fc.dskt2.DSKT2');

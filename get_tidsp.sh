@@ -40,6 +40,12 @@ then
 	wget http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/latest/exports/TI-C6x-CGT-v6.0.16.1.bin
 fi
 
+# Checking mp3dec
+if ! [ -e c64xplus_mp3dec_1_31_001_production.bin ]
+then
+	wget http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/latest/exports/c64xplus_mp3dec_1_31_001_production.bin
+fi
+
 # Checking ti gstreamer plugins
 if ! [ -e gstreamer_ti ]
 then
@@ -91,6 +97,12 @@ then
 	exit
 fi
 
+if [[ `md5sum c64xplus_mp3dec_1_31_001_production.bin | awk '{print$(1)}'` != `cat md5sum.list | grep c64xplus_mp3dec_1_31_001_production.bin | awk '{print$(1)}'` ]]
+then
+	echo "ERROR: c64xplus_mp3dec_1_31_001_production.bin md5sum not matched!"
+	exit
+fi
+
 #### Changing bin files mode to 755 ####
 chmod 755 *.bin
 
@@ -104,6 +116,10 @@ echo "Installing DVSDK..."
 ./install_cg6x.exp &> /dev/null
 tar zxvf codec_engine_2_24_01.tar.gz -C "$install_dir"/dvsdk_3_00_02_44 &> /dev/null
 mv gstreamer_ti "$install_dir"/dvsdk_3_00_02_44
+./install_mp3dec.exp &> /dev/null
+tar xvf tmp/dm6446_mp3dec_1_31_001_production.tar -C tmp
+cp -a tmp/dm6446_mp3dec_1_31_001_production/packages "$install_dir"/dvsdk_3_00_02_44/cs1omap3530_1_00_01
+rm -rf tmp
 cd -
 
 #### Patching ####
@@ -115,4 +131,5 @@ patch -p1 < "$patch_dir"/dmai.patch
 patch -p1 < "$patch_dir"/dsplink.patch
 patch -p1 < "$patch_dir"/codec_engine.patch
 patch -p1 < "$patch_dir"/gst_ti.patch
+patch -p1 < "$patch_dir"/cs.patch
 cd -
