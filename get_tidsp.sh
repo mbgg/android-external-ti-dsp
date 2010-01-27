@@ -145,5 +145,6 @@ patch -p1 < "$patch_dir"/dmai.patch
 patch -p1 < "$patch_dir"/dsplink.patch
 patch -p1 < "$patch_dir"/codec_engine.patch
 patch -p1 < "$patch_dir"/gst_ti.patch
+patch -p1 < "$patch_dir"/gst_ti.1.patch
 patch -p1 < "$patch_dir"/cs.patch
 cd -

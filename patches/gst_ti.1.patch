@@ -1,0 +1,12 @@
+diff -ruN --exclude .git a/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h b/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h	2010-01-14 18:16:00.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h	2010-01-27 18:58:05.000000000 +0300
+@@ -40,7 +40,7 @@
+ #define TIThread_CODEC_ABORTED  0x80000004UL
+ 
+ /* Thread status utility macros. */
+-#define gst_tithread_lock_status(x) \
++#define gst_tithread_trylock_status(x) \
+             pthread_mutex_trylock(&(x)->threadStatusMutex)
+ #define gst_tithread_unlock_status(x) \
+             pthread_mutex_unlock(&(x)->threadStatusMutex)
