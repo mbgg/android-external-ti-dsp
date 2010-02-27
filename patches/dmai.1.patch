@@ -1,0 +1,12 @@
+diff -ruN --exclude .git a/dmai_2_00_01_04/packages/ti/sdo/dmai/linux/Display_fbdev.c b/dmai_2_00_01_04/packages/ti/sdo/dmai/linux/Display_fbdev.c
+--- a/dmai_2_00_01_04/packages/ti/sdo/dmai/linux/Display_fbdev.c	2010-02-11 18:39:50.000000000 +0300
++++ b/dmai_2_00_01_04/packages/ti/sdo/dmai/linux/Display_fbdev.c	2010-02-11 18:34:51.000000000 +0300
+@@ -136,7 +136,7 @@
+     Int                      displaySize;
+     Int                      bufIdx;
+     Int8                    *virtPtr;
+-    Int32                    physPtr;
++    Int32                    physPtr = 0;
+     Int                      height, width;
+     Display_Handle           hDisplay;
+     Buffer_Handle            hBuf;

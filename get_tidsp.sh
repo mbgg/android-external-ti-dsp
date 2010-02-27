@@ -142,6 +142,7 @@ patch_dir="$install_dir"/patches
 cd "$install_dir"/dvsdk_3_00_02_44
 ln -s "../gt_dais.h" codec_engine_2_24_01/cetools/packages/ti/sdo/fc/utils/gtinfra/gt_dais.h
 patch -p1 < "$patch_dir"/dmai.patch
+patch -p1 < "$patch_dir"/dmai.1.patch
 patch -p1 < "$patch_dir"/dsplink.patch
 patch -p1 < "$patch_dir"/codec_engine.patch
 patch -p1 < "$patch_dir"/gst_ti.patch
