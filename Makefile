@@ -311,6 +311,7 @@ lpm_clean:
 
 # Gstreamer plugin
 ti_gst:
+ifeq ($(strip $(BUILD_WITH_GST)), true)
 	make -C $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src PLATFORM=$(GST_PLATFORM) \
 	XDC_TARGET=gnu.targets.arm.GCArmv5T \
 	XDC_PLATFORM=ti.platforms.$(GST_XDC_PLATFORM) \
@@ -350,9 +351,12 @@ ti_gst:
 		-lgstreamer-0.10 -lgstaudio-0.10 -lgstvideo-0.10 -lgstbase-0.10 -lgsttag-0.10 \
 		-lglib-2.0 -lgthread-2.0 -lgmodule-2.0 -lgobject-2.0" \
 	all
+endif 
 
 ti_gst_clean:
+ifeq ($(strip $(BUILD_WITH_GST)), true)
 	make -C $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src clean PLATFORM=$(GST_PLATFORM)
+endif
 
 install:
 	mkdir $(DVSDK_INSTALL_DIR) -p
@@ -361,4 +365,6 @@ install:
 	cp $(CE_INSTALL_DIR)/cetools/packages/ti/sdo/linuxutils/cmem/src/module/cmemk.ko $(DVSDK_INSTALL_DIR)
 	cp $(CE_INSTALL_DIR)/cetools/packages/ti/sdo/linuxutils/sdma/src/module/sdmak.ko $(DVSDK_INSTALL_DIR)
 	cp $(CODEC_INSTALL_DIR)/packages/ti/sdo/server/cs/bin/cs.x64P $(DVSDK_INSTALL_DIR)
-	cp $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src/libgstticodecplugin.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/plugins
+ifeq ($(strip $(BUILD_WITH_GST)), true)
+	cp $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src/libgstticodecplugin.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/plugins/
+endif
