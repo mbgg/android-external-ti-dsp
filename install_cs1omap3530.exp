@@ -1,0 +1,29 @@
+#!/usr/bin/expect -f
+# Copyright (C) 2010 Yegor Yelizarov <yegor.yelizarov@gmail.com>
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set pwd [exec pwd]
+set timeout -1
+spawn ./cs1omap3530_setupLinux_1_01_00-prebuilt-dvsdk3.01.00.10.bin --prefix $pwd/dvsdk_3_01_00_10 --mode console
+expect -re ".*This will install Texas Instruments CS1OMAP3530.*"
+send -- "y\r"
+expect -re ".*Please read the following license agreement."
+send -- " "
+expect -re ".*-- Press space to continue or 'q' to quit --"
+send -- "q"
+expect -re ".*Do you agree to the license agreement above?.*"
+send -- "y\r"
+expect -re ".*Where do you want to install.*"
+send -- "\r"
+expect eof

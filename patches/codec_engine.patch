@@ -1,4 +1,4 @@
-# Copyright (C) 2009 Andrei Dolnikov <dolnikov.andrei@gmail.com>
+# Copyright (C) 2010 Yegor Yelizarov <yegor.yelizarov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,24 +12,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-diff -pruN a/codec_engine_2_24_01.orig/cetools/packages/ti/sdo/fc/dman3/package.xs b/codec_engine_2_24_01/cetools/packages/ti/sdo/fc/dman3/package.xs
---- a/codec_engine_2_24_01.orig/cetools/packages/ti/sdo/fc/dman3/package.xs	2009-07-17 03:33:44.000000000 +0400
-+++ b/codec_engine_2_24_01/cetools/packages/ti/sdo/fc/dman3/package.xs	2009-11-09 16:33:45.000000000 +0300
-@@ -40,6 +40,10 @@ function validate()
+diff -ruN a/codec_engine_2_25_05_16/cetools/packages/ti/bios/power/utils/_config.bld b/codec_engine_2_25_05_16/cetools/packages/ti/bios/power/utils/_config.bld
+--- a/codec_engine_2_25_05_16/cetools/packages/ti/bios/power/utils/_config.bld	2010-05-01 00:30:21.000000000 +0400
++++ b/codec_engine_2_25_05_16/cetools/packages/ti/bios/power/utils/_config.bld	2010-07-06 19:01:05.846029401 +0400
+@@ -137,24 +137,24 @@
+ /*
+  *  ======== Arm Target ========
+  */
+-var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
+-GCArmv5T.LONGNAME = "bin/arm-none-linux-gnueabi-gcc";
+-GCArmv5T.rootDir = vendors + "/cs/arm/arm-2007q3";
+-GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing ";
+-GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++", "");
+-GCArmv5T.lnkOpts.suffix += " -lpthread ";
+-GCArmv5T.platform = null;
+-GCArmv5T.platforms = [
++var GCArmv7A = xdc.useModule('gnu.targets.arm.GCArmv7A');
++GCArmv7A.LONGNAME = "bin/arm-none-linux-gnueabi-gcc";
++GCArmv7A.rootDir = vendors + "/cs/arm/arm-2007q3";
++GCArmv7A.ccOpts.prefix += " -Wall -fno-strict-aliasing ";
++GCArmv7A.lnkOpts.suffix = GCArmv7A.lnkOpts.suffix.replace("-lstdc++", "");
++GCArmv7A.lnkOpts.suffix += " -lpthread ";
++GCArmv7A.platform = null;
++GCArmv7A.platforms = [
+     "ti.platforms.evmDM6446",
+     "ti.platforms.evm2530",
+     "ti.platforms.evm3530"
+ ];
  
-     var suffix = Program.build.target.findSuffix(this); 
+ /* remove profiles we don't use */
+-delete GCArmv5T.profiles["coverage"];
+-delete GCArmv5T.profiles["profile"];
++delete GCArmv7A.profiles["coverage"];
++delete GCArmv7A.profiles["profile"];
  
-+    if (suffix == null) {
-+        return;
-+    }
-+
-     if (!(suffix.match(/64P/)) && (!(suffix.match(/674/))) &&
-             (this.DMAN3.useExternalRM == true)) {
-        throw("\n\n  DMAN3 Error: Configured DMAN3.useExternalRM = true for " +
-diff -pruN a/codec_engine_2_24_01.orig/config.bld b/codec_engine_2_24_01/config.bld
---- a/codec_engine_2_24_01.orig/config.bld	1970-01-01 03:00:00.000000000 +0300
-+++ b/codec_engine_2_24_01/config.bld	2009-11-09 16:33:45.000000000 +0300
-@@ -0,0 +1,44 @@
+-Build.targets.$add(GCArmv5T);
++Build.targets.$add(GCArmv7A);
+ 
+ 
+ /*
+diff -ruN a/codec_engine_2_25_05_16/config.bld b/codec_engine_2_25_05_16/config.bld
+--- a/codec_engine_2_25_05_16/config.bld	1970-01-01 03:00:00.000000000 +0300
++++ b/codec_engine_2_25_05_16/config.bld	2010-07-06 19:01:05.846780497 +0400
+@@ -0,0 +1,46 @@
 +/* enable any interesting diagnostics for the TI toolchain */
 +var remarks = " -pden -pds=195 ";
 + 
@@ -49,24 +74,26 @@ diff -pruN a/codec_engine_2_24_01.orig/config.bld b/codec_engine_2_24_01/config.
 + 
 +Build.targets.$add(C64P);
 + 
-+/* ======== gnu.targets.arm.GCArmv5T ======== */
-+var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
-+GCArmv5T.rootDir = "" +  java.lang.System.getenv("ANDROID_TOOLCHAIN");
-+GCArmv5T.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
++/* ======== gnu.targets.arm.GCArmv7A ======== */
++var GCArmv7A = xdc.useModule('gnu.targets.arm.GCArmv7A');
++GCArmv7A.rootDir = "" +  java.lang.System.getenv("ANDROID_TOOLCHAIN");
++GCArmv7A.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
 +
-+GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
++GCArmv7A.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
 +
-+GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
++GCArmv7A.lnkOpts.suffix = GCArmv7A.lnkOpts.suffix.replace("-lstdc++","");
 +
-+GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++GCArmv7A.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
 +
-+GCArmv5T.platforms = [
++GCArmv7A.noStdLinkScript = true;
++
++GCArmv7A.platforms = [
 +    "ti.platforms.evm3530"
 +];
-+delete GCArmv5T.profiles["coverage"];
-+delete GCArmv5T.profiles["profile"];
++delete GCArmv7A.profiles["coverage"];
++delete GCArmv7A.profiles["profile"];
 + 
-+Build.targets.$add(GCArmv5T);
++Build.targets.$add(GCArmv7A);
 + 
 +/*
 + * Add this libvers.xdt template to each package being built to auto-generate
@@ -74,10 +101,230 @@ diff -pruN a/codec_engine_2_24_01.orig/config.bld b/codec_engine_2_24_01/config.
 + * different devices.
 + */
 +Pkg.libTemplate = "ti/sdo/ce/utils/libvers.xdt";
-diff -pruN a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/GT_config_posix.c b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
---- a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/GT_config_posix.c	2009-07-25 08:35:31.000000000 +0400
-+++ b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/GT_config_posix.c	2009-11-09 16:34:56.000000000 +0300
-@@ -129,7 +129,9 @@ Int GTConfig_posixInit(Void)
+diff -ruN a/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.bld b/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.bld
+--- a/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.bld	2010-06-19 06:50:52.000000000 +0400
++++ b/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.bld	2010-07-06 19:01:11.291721010 +0400
+@@ -74,7 +74,7 @@
+     }
+ 
+     /* build only for ARM targets */
+-    if ((":" + targ.getISAChain().join(":")+":").match(/:v5T:|:v6:/i)) {
++    if ((":" + targ.getISAChain().join(":")+":").match(/:v5T:|:v6:|:v7A:/i)) {
+         print("building for target " + targ.name + " ...");
+ 
+         linkGppGlobal.runtimeOS = linkGppGlobal.LINUX;
+diff -ruN a/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.xs b/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.xs
+--- a/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.xs	2010-06-19 06:50:52.000000000 +0400
++++ b/codec_engine_2_25_05_16/packages/ti/dsplink/utils/lad/package.xs	2010-07-06 19:01:11.291721010 +0400
+@@ -74,7 +74,7 @@
+ 
+         /* device = TMS320C3430, OMAP3530, cpu = ARM */
+         else if (device.match(/^TMS320C3430$|^OMAP3530$/)
+-                && isa.match(/^v5T$|^v6$|^v4T$/i)) {
++                && isa.match(/^v5T$|^v6$|^v4T$|^v7A$/i)) {
+             name = "lib/" + profile + "/lad_3530";
+         }
+     }
+diff -ruN a/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.bld b/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.bld
+--- a/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.bld	2010-06-19 06:56:23.000000000 +0400
++++ b/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.bld	2010-07-06 19:01:14.274031939 +0400
+@@ -76,74 +76,7 @@
+         continue;
+     }
+ 
+-    if ((":"+targ.getISAChain().join(":")+":").match(/:v5T:|:v6:/i)) {
+-        /* DM6446 */
+-        linkGppGlobal.runtimeOS = linkGppGlobal.LINUX;
+-        linkGppGlobal.deviceName = linkGppGlobal.DAVINCI;
+-
+-        lib = Pkg.addLibrary("lib/release/ipc_dsplink_6446", targ, {
+-            defs: linkGppGlobal.getDefines(),
+-            incs: linkGppGlobal.getIncludes(),
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_DM6446.c"
+-        ]);
+-
+-        lib = Pkg.addLibrary("lib/debug/ipc_dsplink_6446", targ, {
+-            defs: linkGppGlobal.getDefines(),
+-            incs: linkGppGlobal.getIncludes(),
+-            profile: "debug"
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_DM6446.c"
+-        ]);
+-
+-        /* DM6467 */
+-        linkGppGlobal.deviceName = linkGppGlobal.DAVINCIHD;
+-
+-        lib = Pkg.addLibrary("lib/release/ipc_dsplink_6467", targ, {
+-            defs: linkGppGlobal.getDefines(),
+-            incs: linkGppGlobal.getIncludes(),
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_DM6467.c"
+-        ]);
+-
+-        lib = Pkg.addLibrary("lib/debug/ipc_dsplink_6467", targ, {
+-            defs: linkGppGlobal.getDefines(),
+-            incs: linkGppGlobal.getIncludes(),
+-            profile: "debug"
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_DM6467.c"
+-        ]);
+-
+-        /* OMAP2530 */
+-        linkGppGlobal.deviceName = linkGppGlobal.OMAP2530;
+-
+-        lib = Pkg.addLibrary("lib/release/ipc_dsplink_2530", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_OMAP2530.c"
+-        ]);
+-
+-        lib = Pkg.addLibrary("lib/debug/ipc_dsplink_2530", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-            profile: "debug"
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_OMAP2530.c"
+-        ]);
+-
++    if ((":"+targ.getISAChain().join(":")+":").match(/:v5T:|:v6:|:v7A:/i)) {
+         /* OMAP3530 */
+         linkGppGlobal.deviceName = linkGppGlobal.OMAP3530;
+ 
+@@ -166,74 +99,9 @@
+             "Processor_dsplink_linkcfg_OMAP3530.c"
+         ]);
+ 
+-        /* DM357 */
+-        linkGppGlobal.deviceName = linkGppGlobal.DM357;
+-
+-        lib = Pkg.addLibrary("lib/release/ipc_dsplink_357", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_DM357.c"
+-        ]);
+-
+-        lib = Pkg.addLibrary("lib/debug/ipc_dsplink_357", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-            profile: "debug"
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_DM357.c"
+-        ]);
+-
+-        /* OMAPL137 */
+-        linkGppGlobal.deviceName = linkGppGlobal.OMAPL1XX;
+-
+-        lib = Pkg.addLibrary("lib/release/ipc_dsplink_137", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_OMAPL137.c"
+-        ]);
+-
+-        lib = Pkg.addLibrary("lib/debug/ipc_dsplink_137", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-            profile: "debug"
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_OMAPL137.c"
+-        ]);
+-
+-        /* OMAPL138 */
+-        linkGppGlobal.deviceName = linkGppGlobal.OMAPL138;
+-
+-        lib = Pkg.addLibrary("lib/release/ipc_dsplink_138", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_OMAPL138.c"
+-        ]);
+-
+-        lib = Pkg.addLibrary("lib/debug/ipc_dsplink_138", targ, {
+-            defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-            incs: linkGppGlobal.getIncludes(),
+-            profile: "debug"
+-        });
+-        lib.addObjects(buildDspLink.objs);
+-        lib.addObjects([
+-            "Processor_dsplink_linkcfg_OMAPL138.c"
+-        ]);
+     }
+     else {
+-        if ((":"+targ.getISAChain().join(":")+":").match(/:v4T:/i)) {
++        if ((":"+targ.getISAChain().join(":")+":").match(/:v4T:|:v7A:/i)) {
+             /* OMAP3530 */
+             linkGppGlobal.runtimeOS = linkGppGlobal.WINCE;
+             linkGppGlobal.deviceName = linkGppGlobal.OMAP3530;
+@@ -257,28 +125,6 @@
+                 "Processor_dsplink_linkcfg_OMAP3530.c"
+             ]);
+ 
+-            /* DM6446 */
+-            linkGppGlobal.deviceName = linkGppGlobal.DAVINCI;
+-            linkGppGlobal.runtimeOS = linkGppGlobal.WINCE;
+-
+-            lib = Pkg.addLibrary("lib/release/ipc_dsplink_6446", targ, {
+-                defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-                incs: linkGppGlobal.getIncludes(),
+-            });
+-            lib.addObjects(buildDspLink.objs);
+-            lib.addObjects([
+-                "Processor_dsplink_linkcfg_DM6446.c"
+-            ]);
+-
+-            lib = Pkg.addLibrary("lib/debug/ipc_dsplink_6446", targ, {
+-                defs: linkGppGlobal.getDefines() + "-DPOWER_NOT_SUPPORTED ",
+-                incs: linkGppGlobal.getIncludes(),
+-                profile: "debug"
+-            });
+-            lib.addObjects(buildDspLink.objs);
+-            lib.addObjects([
+-                "Processor_dsplink_linkcfg_DM6446.c"
+-            ]);
+         }
+     }
+ }
+diff -ruN a/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.xs b/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.xs
+--- a/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.xs	2010-06-19 06:56:23.000000000 +0400
++++ b/codec_engine_2_25_05_16/packages/ti/sdo/ce/ipc/dsplink/package.xs	2010-07-06 19:01:05.846780497 +0400
+@@ -212,7 +212,7 @@
+ 
+     /* device = TMS320C3430, OMAP3530, cpu = ARM */
+     else if (device.match(/^TMS320C3430$|^OMAP3530$/)
+-        && isa.match(/^v5T$|^v6$|^v4T$/i)) {
++        && isa.match(/^v5T$|^v6$|^v4T$|^v7A$/i)) {
+         lib = "lib/" + this.profile + "/ipc_dsplink_3530";
+     }
+ 
+diff -ruN a/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/GT_config_posix.c b/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
+--- a/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/GT_config_posix.c	2010-06-19 06:56:45.000000000 +0400
++++ b/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/GT_config_posix.c	2010-07-06 19:01:05.846780497 +0400
+@@ -129,7 +129,9 @@
          /* initialize mutex */
          pthread_mutexattr_init(&mattrs);
          /* "adaptive" below means "fast", as opposed to "recursive" */
@@ -87,10 +334,10 @@ diff -pruN a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/GT_config_p
          pthread_mutex_init(&mutex,  &mattrs);
  
          /* call Global_atexit() to schedule our cleanup. Global module
-diff -pruN a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/Thread_posix.c b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/Thread_posix.c
---- a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/Thread_posix.c	2009-07-25 08:35:32.000000000 +0400
-+++ b/codec_engine_2_24_01/packages/ti/sdo/ce/osal/linux/Thread_posix.c	2009-11-09 16:36:14.000000000 +0300
-@@ -159,7 +159,9 @@ Void Thread_delete(Thread_Handle task)
+diff -ruN a/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/Thread_posix.c b/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/Thread_posix.c
+--- a/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/Thread_posix.c	2010-06-19 06:56:46.000000000 +0400
++++ b/codec_engine_2_25_05_16/packages/ti/sdo/ce/osal/linux/Thread_posix.c	2010-07-06 19:01:05.847751660 +0400
+@@ -159,7 +159,9 @@
              if (cancel) {
                  int result;
  
@@ -100,7 +347,7 @@ diff -pruN a/codec_engine_2_24_01.orig/packages/ti/sdo/ce/osal/linux/Thread_posi
                  GT_1trace(curTrace, GT_4CLASS, "Thread_delete> pthread_cancel "
                      "(0x%x)\n", result);
                  result = pthread_join(task->pthread, NULL);
-@@ -328,10 +330,12 @@ static void runStub(Thread_Obj *task)
+@@ -328,10 +330,12 @@
  {
      pthread_setspecific(taskKey, task);
  

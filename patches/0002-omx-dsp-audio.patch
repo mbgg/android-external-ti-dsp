@@ -1,0 +1,2792 @@
+diff -pruN a/omx_ti/audio/config.bld b/omx_ti/audio/config.bld
+--- a/omx_ti/audio/config.bld	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/config.bld	2010-09-24 21:11:53.000000000 +0400
+@@ -0,0 +1,40 @@
++/*
++ *  ======== config.bld ========
++ * User note: YOU MUST MODIFY THIS FILE TO SPECIFY THE COMPILER TOOL PATHS.
++ *
++ * Edit this file to specify compiler toolchain paths, and any custom
++ * compiler/linker options.
++ */
++
++/* location of your C6000 codegen tools */
++var C64P = xdc.useModule('ti.targets.C64P');
++
++
++C64P.rootDir = "/opt/dmsw/cg6x_6_0_16/";
++C64P.platform = "ti.platforms.evmDM6446"; 
++
++var GCArmv7A = xdc.useModule('gnu.targets.arm.GCArmv7A');
++GCArmv7A.rootDir = "" + java.lang.System.getenv("MVTOOL_DIR");
++GCArmv7A.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
++
++GCArmv7A.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
++
++GCArmv7A.lnkOpts.suffix = GCArmv7A.lnkOpts.suffix.replace("-lstdc++","");
++GCArmv7A.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++
++GCArmv7A.platforms = [
++    "ti.platforms.evm3530"
++];
++
++Build.targets.$add(GCArmv7A);
++
++/*
++ *  ======== Build.targets ========
++ * list of targets (ISAs + compilers) to build for
++ */
++/*
++Build.targets = [
++    C64P,
++];
++*/
++
+diff -pruN a/omx_ti/audio/Makefile b/omx_ti/audio/Makefile
+--- a/omx_ti/audio/Makefile	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/Makefile	2010-09-24 21:11:53.000000000 +0400
+@@ -0,0 +1,23 @@
++XDC_CONFIG_BASENAME = omx_dsp_audio_$(PLATFORM)
++CONFIGURO     = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
++BUILT_SOURCES = $(XDC_CONFIG_BASENAME)/compiler.opt $(XDC_CONFIG_BASENAME)/linker.cmd
++XDC_PATH      = .;$(XDC_INSTALL_DIR)/packages;$(LINK_INSTALL_DIR)/packages;$(FC_INSTALL_DIR)/packages;$(CE_INSTALL_DIR)/packages;$(XDAIS_INSTALL_DIR)/packages;$(CODEC_INSTALL_DIR)/packages;$(CMEM_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(LPM_INSTALL_DIR)/packages;$(XDC_USER_PATH);$(EDMA3_LLD_INSTALL_DIR)/packages;
++
++openmaxticomponent_objs = \
++	omx-dsp-audio.o \
++	omx-dsp-aac.o \
++	omx-dsp-mp3.o
++
++xdc_config:
++	XDCPATH="$(XDC_PATH)" $(CONFIGURO) -c $(MVTOOL_DIR) -o  $(XDC_CONFIG_BASENAME) -t gnu.targets.arm.GCArmv7A -p $(XDC_PLATFORM) -b $(OMX_INSTALL_DIR)/config.bld omx_dsp_audio_$(PLATFORM).cfg
++
++COMPILER_OPT = $(shell cat $(XDC_CONFIG_BASENAME)/compiler.opt) -I../include
++
++all: xdc_config
++	$(CXX) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o omx-dsp-audio.o omx-dsp-audio.cpp
++	$(CXX) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o omx-dsp-aac.o omx-dsp-aac.cpp
++	$(CXX) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o omx-dsp-mp3.o omx-dsp-mp3.cpp
++	$(CXX) $(LDFLAGS) $(openmaxticomponent_objs) -T $(XDC_CONFIG_BASENAME)/linker.cmd -Wl,-soname -Wl,libomx_dsp_audio_sharedlibrary.so -o libomx_dsp_audio_sharedlibrary.so
++
++clean:
++	rm -rf *.o *.so omx_dsp_audio_$(PLATFORM)
+diff -pruN a/omx_ti/audio/omx-dsp-aac.cpp b/omx_ti/audio/omx-dsp-aac.cpp
+--- a/omx_ti/audio/omx-dsp-aac.cpp	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx-dsp-aac.cpp	2010-09-24 21:11:53.000000000 +0400
+@@ -0,0 +1,423 @@
++/*******************************************************************************
++ * omx-dsp-aac.cpp
++ *
++ * Definition of AAC DSP-accelerated audio decoder. 
++ *
++ * Copyright (C) 2010 Alexander Smirnov <asmirnov.bluesman@gmail.com>
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ ******************************************************************************/
++
++#define MODULE_TAG                      AAC
++
++/*******************************************************************************
++ * Includes
++ ******************************************************************************/
++
++#include "omx-dsp.h"
++#include "omx-dsp-aac.h"
++
++/*******************************************************************************
++ * Debugging configuration
++ ******************************************************************************/
++
++/* ...tracing configuration */
++TRACE_TAG (INIT,    1);
++TRACE_TAG (DATA,    0);
++TRACE_TAG (PROCESS, 0);
++TRACE_TAG (DEBUG,   0);
++TRACE_TAG (ERROR,   1);
++TRACE_TAG (INFO,    0);
++
++/*******************************************************************************
++ * Local constants definitions
++ ******************************************************************************/
++
++static const OMX_STRING     aac_decoder_name = (OMX_STRING) "aachedec";
++
++/*******************************************************************************
++ * Plugin system infrastructure
++ ******************************************************************************/
++
++/*******************************************************************************
++ * AacOmxDspComponentFactory
++ *
++ * This function is called by OMX_GetHandle and it creates an instance of the 
++ * aac component AO
++ ******************************************************************************/
++
++OMX_ERRORTYPE AacOmxDspComponentFactory (OMX_OUT OMX_HANDLETYPE* pHandle, OMX_IN  OMX_PTR pAppData, OMX_IN OMX_PTR pProxy , OMX_STRING aOmxLibName, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount)
++{
++    OmxDspAacDecoder   *d;
++    OMX_ERRORTYPE       Status;
++
++    OSCL_UNUSED_ARG(aOmxLibName);
++    OSCL_UNUSED_ARG(aOmxLib);
++    OSCL_UNUSED_ARG(aOsclUuid);
++    OSCL_UNUSED_ARG(aRefCount);
++
++    /***************************************************************************
++     * Create decoder component object
++     **************************************************************************/
++
++    if ((d = (OmxDspAacDecoder*)OSCL_NEW(OmxDspAacDecoder, ())) == NULL)
++    {
++        return TRACE (ERROR, _X("Failed to allocate resources")), OMX_ErrorInsufficientResources;
++    }
++
++    /***************************************************************************
++     * Call the construct component to initialize OMX types
++     **************************************************************************/
++
++    /* ...construct component */
++    Status = d->ConstructComponent (pAppData, pProxy, aac_decoder_name);
++
++    /* ...and return the handle and status */
++    return *pHandle = d->GetOmxHandle(), TRACE (DEBUG, _b("Component[%p] created: %d"), (void*)(*pHandle), Status), Status;
++}
++
++/*******************************************************************************
++ * AacOmxDspComponentDestructor
++ *
++ * This function is called by OMX_FreeHandle when component AO needs to be 
++ * destroyed
++ ******************************************************************************/
++
++OMX_ERRORTYPE AacOmxDspComponentDestructor (OMX_IN OMX_HANDLETYPE pHandle, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount)
++{
++    OmxDspAacDecoder   *d = (OmxDspAacDecoder*)((OMX_COMPONENTTYPE*)pHandle)->pComponentPrivate;
++    
++    OSCL_UNUSED_ARG(aOmxLib);
++    OSCL_UNUSED_ARG(aOsclUuid);
++    OSCL_UNUSED_ARG(aRefCount);
++
++    /* ...clean up decoder, OMX component stuff */
++    d->DestroyComponent();
++
++    /* ...destroy the AO class */
++    OSCL_DELETE(d);
++
++    /* ...and return success result */
++    return TRACE (DEBUG, _b("Component[%p] destroyed"), (void*)pHandle), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * Class implementation
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspAacDecoder::OmxDspAacDecoder
++ *
++ * Component object constructor
++ ******************************************************************************/
++
++OmxDspAacDecoder::OmxDspAacDecoder()
++{
++    TRACE (DEBUG, _b("Component[%p] constructed"), this);
++    
++    /* ...add component to scheduler */
++    (!IsAdded() ? AddToScheduler(), 1 : 0);
++}
++
++/*******************************************************************************
++ * OmxDspAacDecoder::~OmxDspAacDecoder
++ *
++ * Component object destructor
++ ******************************************************************************/
++
++OmxDspAacDecoder::~OmxDspAacDecoder()
++{
++    /* ...remove from scheduler as required */
++    (IsAdded() ? RemoveFromScheduler(), 1 : 0);
++
++    TRACE (DEBUG, _b("Component[%p] destructed"), this);
++}
++
++/*******************************************************************************
++ * Component interface implementation
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspAacDecoder::ConstructComponent
++ *
++ * Construct component
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAacDecoder::ConstructComponent (OMX_PTR pAppData, OMX_PTR pProxy, OMX_STRING cDecoderName)
++{
++    ComponentPortType  *pInPort, *pOutPort;
++    OMX_ERRORTYPE       Status;
++
++    /***************************************************************************
++     * Call base class construction function first
++     **************************************************************************/
++
++    if ((Status = OmxDspAudioDecoder::ConstructComponent (pAppData, pProxy, cDecoderName)) != OMX_ErrorNone)
++    {
++        /* ...base component creation failed; resign */
++        return Status;
++    }
++
++    /***************************************************************************
++     * Initialize ports
++     **************************************************************************/
++
++    pInPort = ipPorts[OMX_PORT_INPUTPORT_INDEX], pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++
++    /***************************************************************************
++     * Input port configuration - encoded AAC audio stream
++     **************************************************************************/
++
++    /* ...input audio format */
++    pInPort->PortParam.format.audio.eEncoding = OMX_AUDIO_CodingAAC;
++
++    /* ...input/output ports dimentions */
++    pInPort->PortParam.nBufferCountActual = OMX_DSP_AAC_INPUT_BUFFER_NUMBER;
++    pInPort->PortParam.nBufferSize = OMX_DSP_AAC_INPUT_BUFFER_SIZE;
++    pOutPort->PortParam.nBufferCountActual = OMX_DSP_AAC_OUTPUT_BUFFER_NUMBER;
++    pOutPort->PortParam.nBufferSize = OMX_DSP_AAC_OUTPUT_BUFFER_SIZE * 6;
++
++    /* ...default values for Aac audio param port */
++    pInPort->AudioAacParam.nPortIndex = OMX_PORT_INPUTPORT_INDEX;
++    pInPort->AudioAacParam.nChannels = 2;
++    pInPort->AudioAacParam.nBitRate = 0;
++    pInPort->AudioAacParam.nSampleRate = 44100;
++    pInPort->AudioAacParam.nAudioBandWidth = 0;
++    pInPort->AudioAacParam.nFrameLength = 2048; // use HE_PS frame size as default
++    pInPort->AudioAacParam.eChannelMode = OMX_AUDIO_ChannelModeStereo;
++    pInPort->AudioAacParam.eAACProfile = OMX_AUDIO_AACObjectMain;    //OMX_AUDIO_AACObjectLC;
++    pInPort->AudioAacParam.eAACStreamFormat = OMX_AUDIO_AACStreamFormatRAW;
++
++    pInPort->AudioParam.eEncoding = OMX_AUDIO_CodingAAC;
++
++    oscl_strncpy((OMX_STRING)iComponentRole, (OMX_STRING)"audio_decoder.aac", OMX_MAX_STRINGNAME_SIZE);
++
++    /***************************************************************************
++     * Initialization completed successfully
++     **************************************************************************/
++
++    return TRACE (INIT, _b("AAC decoder component constructed")), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAacDecoder::DestroyComponent
++ *
++ * This function is called by the omx core when the component is disposed by 
++ * the IL client with a call to FreeHandle().
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAacDecoder::DestroyComponent (void)
++{
++    OMX_ERRORTYPE   Status;
++    
++    /***************************************************************************
++     * Pass control to base version (no specific actions)
++     **************************************************************************/
++
++    return Status = OmxDspAudioDecoder::DestroyComponent(), TRACE (INIT, _b("AAC decoder component destructed")), Status;
++}
++/*******************************************************************************
++ * DSP engine support
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspAacDecoder::DSPDecoderInit
++ *
++ * Initialize DSP decoder 
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAacDecoder::DSPDecoderInit (void)
++{
++    OMX_ERRORTYPE   Status;
++
++    /***************************************************************************
++     * Initialize base audio decoder
++     **************************************************************************/
++
++    if ((Status = OmxDspAudioDecoder::DSPDecoderInit()) != OMX_ErrorNone)
++    {
++        return Status;
++    }
++
++    iDSPWriteIndex = 0;
++    iDSPBufferOffset = 0;
++    rate_Idx = 0;
++    n_Channels = 0;
++
++    /***************************************************************************
++     * Decoder engine successfully created
++     **************************************************************************/
++
++    return TRACE (INIT, _b("AAC audio decoder initialized")), OMX_ErrorNone;
++}
++    
++/*******************************************************************************
++ * OmxDspAacDecoder::CreateADIFHeader
++ *
++ * Create ADIF header for mp4 stream
++ ******************************************************************************/
++#define MAX_AAC_HEADER_LENGTH	20
++
++void OmxDspAacDecoder::Create_ADIF_Header(void)
++{
++    char *Header_Buf;
++
++    TRACE (DEBUG, _b("Generating ADIF header for audio stream"));
++
++/* allocate buffer for the ADIF header */
++    Header_Buf = (char *)malloc(MAX_AAC_HEADER_LENGTH);
++
++/* flush allocated buffer */
++    memset(Header_Buf, 0, MAX_AAC_HEADER_LENGTH);
++
++/* store id field in ADIF header */
++    memcpy(Header_Buf, "ADIF", 4);
++
++/* reset copyright_id_present field in ADIF header */
++    Header_Buf[4] &= ~0x1;
++
++/*
++ * Store profile value in ADIF header
++ * 0 - MAIN, 1 - LC, 2 - SCR, 3 - LTR (2-bit long)
++ *
++ * LC - 0x1 is used
++ */
++    Header_Buf[10] |= (0x1 & 0x2), Header_Buf[11] |= ((0x1 & 0x1) << 7);
++
++/*
++ * store sampling frequency index value in ADIF header
++ */
++    Header_Buf[11] |= (rate_Idx << 3);
++
++/*
++ * store front_channel_element value in ADIF header
++ */
++    Header_Buf[11] |= (n_Channels >> 1);
++    Header_Buf[12] |= ((n_Channels & 0x1) << 7);
++
++/* store comment field value in ADIF header */
++    Header_Buf[16] |= 0x3;
++
++/* Push the header to the decoder */
++    oscl_memcpy (pDSPBuffer, Header_Buf, MAX_AAC_HEADER_LENGTH);
++
++    free(Header_Buf);
++}
++
++/*******************************************************************************
++ * OmxDspAacDecoder::DSPPut
++ *
++ * Copy data from input buffer to DSP buffer
++ ******************************************************************************/
++
++OMX_BOOL OmxDspAacDecoder::DSPPut (OMX_BUFFERHEADERTYPE* b)
++{
++    OMX_U32     n = b->nFilledLen;
++    OMX_U32     e;
++    
++    TRACE (DATA, _b("copy %u bytes: [%lu, %lu)"), (unsigned)n, iDSPWriteIndex, iDSPWriteIndex + n);
++    
++    /* ...check out there is enough room to store data (TBD) */
++    if ((e = iDSPWriteIndex + n) > iDSPBufferSize) return TRACE (DATA, _b("Input buffer to large")), OMX_FALSE;
++
++/* Look for the AAC-stream header. Add if missing.
++ * 2 bytes length frame is an opencore config frame. 
++ * Otherwise it's data frame.
++ */
++    if (e == 2) 
++    {
++        unsigned char uc = 0;
++
++        iFirstDataFrame = OMX_TRUE;
++        iEndOfFrameFlag = OMX_FALSE;
++
++        /* ...getting sample-rate */
++        uc |= (b->pBuffer[0] & 7) << 1;
++        uc |= (b->pBuffer[1] >> 7);
++	memcpy(&rate_Idx, &uc, 1);
++
++        /* ...getting number of channels */
++        uc = 0;
++        uc |= (b->pBuffer[1] >> 3) & 0xf;
++	memcpy(&n_Channels, &uc, 1);
++
++        return OMX_TRUE;
++    }
++    else if (iFirstDataFrame == OMX_TRUE)
++    {
++        iFirstDataFrame = OMX_FALSE;
++
++        /* check for the ADTS header: (0xff 0xf1 .. .. .. .. ..) */
++        if ((b->pBuffer[b->nOffset + 0] == 0xff) &&
++            (b->pBuffer[b->nOffset + 1] == 0xf1))
++        {
++            TRACE(INFO, _b("Found ADTS header, continue decoding without changes"));
++        } else
++        /* No ADTS header => mp4 container is used */
++        {
++            TRACE(INFO, _b("No ADTS header found, needs to generate ADIF header"));
++
++            /* Currently hardcoded */
++            Create_ADIF_Header();
++            e += 20;
++            iDSPWriteIndex = 20;
++        }
++    }
++    
++    /* ...copy input buffer content into DSP-owned buffer */
++    oscl_memcpy (pDSPBuffer + iDSPWriteIndex, b->pBuffer + b->nOffset, n);
++    
++    /* ...set input buffer length and reset writing pointer for a final chunk */
++    (iEndOfFrameFlag == OMX_TRUE ? TRACE (DATA, _b("Received frame: %lu bytes"), e), Buffer_setNumBytesUsed (hDSPBuffer, e), e = 0 : 0);
++
++    /* ...advance writing index and return success result */
++    return iDSPWriteIndex += n, OMX_TRUE;
++}
++
++int OmxDspAacDecoder::DSPResize (Buffer_Handle hBuf)
++{
++    ComponentPortType  *pInPort, *pOutPort;
++    Int                 SampleRate;
++    OMX_U32             OutputLength;
++
++    pInPort = ipPorts[OMX_PORT_INPUTPORT_INDEX], pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++
++    /***************************************************************************
++    * Setting rate for output port. Call once after first frame received.
++    **************************************************************************/
++
++    SampleRate = Adec1_getSampleRate(hAd);
++
++    pInPort->AudioAacParam.nSampleRate = SampleRate;
++    pInPort->AudioAacParam.eAACProfile = OMX_AUDIO_AACObjectMain;
++    pInPort->AudioAacParam.nFrameLength = 2048;
++    pOutPort->AudioPcmMode.nSamplingRate = SampleRate;
++    pOutPort->AudioPcmMode.nChannels = 2;
++
++    iResizePending = OMX_TRUE;
++
++    iFrameCount++;
++
++    /* ...send port settings changed event */
++    OMX_COMPONENTTYPE* pHandle = (OMX_COMPONENTTYPE*) ipAppPriv->CompHandle;
++    (*(ipCallbacks->EventHandler))
++      (pHandle,
++       iCallbackData,
++       OMX_EventPortSettingsChanged,
++       OMX_PORT_OUTPUTPORT_INDEX,
++       0,
++       NULL);
++
++    return 0;
++}
++
+diff -pruN a/omx_ti/audio/omx-dsp-aac.h b/omx_ti/audio/omx-dsp-aac.h
+--- a/omx_ti/audio/omx-dsp-aac.h	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx-dsp-aac.h	2010-09-24 21:11:53.000000000 +0400
+@@ -0,0 +1,95 @@
++/*******************************************************************************
++ * omx-dsp-aac.h
++ *
++ * Definition of AAC DSP-accelerated audio decoder. 
++ *
++ * Copyright (C) 2010 Alexander Smirnov <asmirnov.bluesman@gmail.com>
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ ******************************************************************************/
++
++#ifndef __OMX_DSP_AAC_H
++#define __OMX_DSP_AAC_H
++
++/*******************************************************************************
++ * Includes
++ ******************************************************************************/
++
++/* ...base audio decoder */
++#include "omx-dsp-audio.h"
++
++#define OMX_DSP_AAC_INPUT_BUFFER_NUMBER 10
++#define OMX_DSP_AAC_INPUT_BUFFER_SIZE 1536
++#define OMX_DSP_AAC_OUTPUT_BUFFER_NUMBER 9
++#define OMX_DSP_AAC_OUTPUT_BUFFER_SIZE 8192
++
++/*******************************************************************************
++ * Component definition
++ ******************************************************************************/
++
++class OmxDspAacDecoder : public OmxDspAudioDecoder
++{
++public:
++
++    /***************************************************************************
++     * Constructor / destructor
++     **************************************************************************/
++
++    OmxDspAacDecoder ();
++    ~OmxDspAacDecoder ();
++
++    /***************************************************************************
++     * Framework API
++     **************************************************************************/
++
++    /* ...component factory */
++    OMX_ERRORTYPE           ConstructComponent (OMX_PTR pAppData, OMX_PTR pProxy, OMX_STRING cDecoderName);
++
++    /* ...component destructor */
++    OMX_ERRORTYPE           DestroyComponent (void);
++
++private:
++
++    /***************************************************************************
++     * Overloaded functions
++     **************************************************************************/
++
++    /* ...decoder initialization */
++    OMX_ERRORTYPE           DSPDecoderInit (void);
++
++    /* ...input data processing function */
++    OMX_BOOL                DSPPut (OMX_BUFFERHEADERTYPE *b);
++
++    /* ...resize buffer table */
++    int                     DSPResize (Buffer_Handle hBuf);
++
++    /* ...add ADIF header for AAC stream stored into the MP4 container */
++    void                    Create_ADIF_Header (void);
++
++    /* ...variable to store sample-rate index and channels. Uses in case MPEG-4 container only */
++    int                     rate_Idx;
++    int                     n_Channels;
++};
++
++/*******************************************************************************
++ * Entry points
++ ******************************************************************************/
++
++/* ...component factory */
++extern OMX_ERRORTYPE AacOmxDspComponentFactory (OMX_OUT OMX_HANDLETYPE* pHandle, OMX_IN  OMX_PTR pAppData, OMX_IN OMX_PTR pProxy , OMX_STRING aOmxLibName, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount);
++
++/* ...component destructor */
++extern OMX_ERRORTYPE AacOmxDspComponentDestructor (OMX_IN OMX_HANDLETYPE pHandle, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount);
++
++#endif
++
+diff -pruN a/omx_ti/audio/omx-dsp-audio.cpp b/omx_ti/audio/omx-dsp-audio.cpp
+--- a/omx_ti/audio/omx-dsp-audio.cpp	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx-dsp-audio.cpp	2010-09-27 17:28:33.000000000 +0400
+@@ -0,0 +1,1513 @@
++/*******************************************************************************
++ * omx-dsp-audio.cpp
++ *
++ * Definition of base class for DSP-accelerated audio decoder. 
++ *
++ * Copyright (C) 2010 Alexander Smirnov <asmirnov.bluesman@gmail.com>
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ ******************************************************************************/
++
++#define MODULE_TAG                      AUDIO
++
++/*******************************************************************************
++ * Includes
++ ******************************************************************************/
++
++#include "omx-dsp.h"
++#include "omx-dsp-audio.h"
++#include "omx-dsp-aac.h"
++#include "omx-dsp-mp3.h"
++
++/*******************************************************************************
++ * Debugging configuration
++ ******************************************************************************/
++
++/* ...tracing configuration */
++TRACE_TAG (INIT,    1);
++TRACE_TAG (DATA,    0);
++TRACE_TAG (PROCESS, 0);
++TRACE_TAG (DEBUG,   0);
++TRACE_TAG (ERROR,   1);
++TRACE_TAG (INFO,    0);
++
++/* ...performance counters */
++PC_TAG (PROCESS, 1);
++PC_TAG (HOLD, 1);
++
++/*******************************************************************************
++ * Plugin system infrastructure
++ ******************************************************************************/
++
++OSCL_DLL_ENTRY_POINT_DEFAULT()
++
++/*******************************************************************************
++ * Local macros definitions
++ ******************************************************************************/
++
++/*******************************************************************************
++ * UUID_FMT, UUID_ARG
++ *
++ * Format string and arguments list for UUID printing
++ ******************************************************************************/
++
++/* ...UUID printing format string */
++#define UUID_FMT                        "%08X:%04hX:%04hX:%02X%02X%02X%02X%02X%02X%02X%02X"
++
++/* ...UUID printing arguments */
++#define UUID_ARG(uuid)                  uuid.data1, uuid.data2, uuid.data3, uuid.data4[0], uuid.data4[1], uuid.data4[2], uuid.data4[3], uuid.data4[4], uuid.data4[5], uuid.data4[6], uuid.data4[7]
++
++/*******************************************************************************
++ * OMX_PROXY_BIND
++ *
++ * Bind framework hook to the component
++ ******************************************************************************/
++
++#if PROXY_INTERFACE  
++#define OMX_PROXY_BIND(c, p, hook)      (void)((c).hook = BaseComponentProxy##hook, ((ProxyApplication_OMX*)(p))->Component##hook = BaseComponent##hook)
++#else
++#define OMX_PROXY_BIND(c, p, hook)      (void)((c).hook = BaseComponent##hook)
++#endif
++
++/*******************************************************************************
++ * OmxDspSharedLibraryInterface
++ *
++ * Interface binding helper
++ ******************************************************************************/
++
++class OmxDspSharedLibraryInterface : public OsclSharedLibraryInterface, public OmxSharedLibraryInterface
++{
++public:
++    
++    /***************************************************************************
++     * QueryOmxComponentInterface
++     *
++     * Select proper entry point basing on provided type ID
++     **************************************************************************/
++
++    OsclAny *QueryOmxComponentInterface(const OsclUuid& aOmxTypeId, const OsclUuid& aInterfaceId)
++    {
++        TRACE (INFO, _b("Interface queried: type = " UUID_FMT ", itfc = " UUID_FMT), UUID_ARG(aOmxTypeId), UUID_ARG(aInterfaceId));
++        
++        if (PV_OMX_AACDEC_UUID == aOmxTypeId)
++        {
++            if (PV_OMX_CREATE_INTERFACE == aInterfaceId)
++            {
++                /* ...query for component factory */
++                return ((OsclAny*)(&AacOmxDspComponentFactory));
++            }
++            else if (PV_OMX_DESTROY_INTERFACE == aInterfaceId)
++            {
++                /* ...query for component destructor */
++                return ((OsclAny*)(&AacOmxDspComponentDestructor));
++            }
++        } else
++        if (PV_OMX_MP3DEC_UUID == aOmxTypeId)
++        {
++            if (PV_OMX_CREATE_INTERFACE == aInterfaceId)
++            {
++                /* ...query for component factory */
++                return ((OsclAny*)(&Mp3OmxDspComponentFactory));
++            }
++            else if (PV_OMX_DESTROY_INTERFACE == aInterfaceId)
++            {
++                /* ...query for component destructor */
++                return ((OsclAny*)(&Mp3OmxDspComponentDestructor));
++            }
++       }
++
++        /* ...no valid entry point found */
++        return NULL;
++    }
++
++    /***************************************************************************
++     * SharedLibraryLookup
++     *
++     * Register the library in plugin framework
++     **************************************************************************/
++
++    OsclAny *SharedLibraryLookup(const OsclUuid& aInterfaceId)
++    {
++        TRACE (INFO, _b("Library lookup: itfc = " UUID_FMT), UUID_ARG(aInterfaceId));
++
++        if (aInterfaceId == PV_OMX_SHARED_INTERFACE)
++        {
++            return OSCL_STATIC_CAST(OmxSharedLibraryInterface*, this);
++        }
++
++        return NULL;
++    }
++};
++
++/*******************************************************************************
++ * Plugin entry points
++ ******************************************************************************/
++extern "C" OSCL_EXPORT_REF OsclAny* PVGetInterface (void)
++{
++    TRACE (INIT, _b("Register DLL within Opencore"));
++    
++    return (OsclAny*) OSCL_NEW(OmxDspSharedLibraryInterface, ());
++}
++
++extern "C" OSCL_EXPORT_REF void PVReleaseInterface (OsclSharedLibraryInterface *aInstance)
++{
++    OmxDspSharedLibraryInterface   *module = (OmxDspSharedLibraryInterface*)aInstance;
++
++    OSCL_DELETE (module);
++
++    TRACE (INIT, _b("DLL unregistered"));
++}
++
++/*******************************************************************************
++ * Base audio decoder component interface implementation
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::ConstructComponent
++ *
++ * Base implementation of component constructor
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::ConstructComponent (OMX_PTR pAppData, OMX_PTR pProxy, OMX_STRING cDecoderName)
++{
++    ComponentPortType  *pInPort, *pOutPort;
++    OMX_ERRORTYPE       Status;
++
++    /***************************************************************************
++     * Local data initialization
++     **************************************************************************/
++
++    /* ...component has two ports */
++    iNumPorts = 2;
++
++    /* ...set proxy pointer */
++    ipComponentProxy = pProxy;
++
++    /* ...set component size */
++    iOmxComponent.nSize = sizeof(OMX_COMPONENTTYPE);
++
++    /* ...component private data points to this AO */
++    iOmxComponent.pComponentPrivate = (OMX_PTR) this;
++
++    /* ...save opaque appplication data pointer */
++    iOmxComponent.pApplicationPrivate = pAppData;
++
++    /* ...save decoder name */
++    iDecoderName = (Char*) cDecoderName;
++    
++    /***************************************************************************
++     * Set up PV capabilities of the component
++     **************************************************************************/
++
++    /* ...use dedicated thread for the component (default setting) */
++    iPVCapabilityFlags.iIsOMXComponentMultiThreaded = OMX_TRUE;
++
++    /* ...use externally-allocated input buffers (default setting) */
++    iPVCapabilityFlags.iOMXComponentSupportsExternalInputBufferAlloc = OMX_TRUE;
++
++    /* ...use internally-allocated output buffers (overriden) */    
++    iPVCapabilityFlags.iOMXComponentSupportsExternalOutputBufferAlloc = OMX_FALSE;
++
++    /* ...the input buffers are movable (default setting) */
++    iPVCapabilityFlags.iOMXComponentSupportsMovableInputBuffers = OMX_TRUE;
++
++    /* ...partial frames are allowed (default setting) */
++    iPVCapabilityFlags.iOMXComponentSupportsPartialFrames = OMX_TRUE;
++
++    /* ...do not pass NAL start codes (default setting) */
++    iPVCapabilityFlags.iOMXComponentUsesNALStartCodes = OMX_FALSE;
++
++    /* ...codec provides packet loss concealment (default seting) */
++    iPVCapabilityFlags.iOMXComponentCanHandleIncompleteFrames = OMX_TRUE;
++
++    /* ...use NAL mode of framework (default setting) */
++    iPVCapabilityFlags.iOMXComponentUsesFullAVCFrames = OMX_FALSE;
++
++#if 0 /* OpenCORE 2.0.7 */
++    iPVCapabilityFlags.iOMXComponentUsesInterleaved2BNALSizes = OMX_FALSE;
++    iPVCapabilityFlags.iOMXComponentUsesInterleaved4BNALSizes = OMX_FALSE;
++#endif
++
++    /***************************************************************************
++     * Bind component interface (both overriden and not)
++     **************************************************************************/
++
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, SendCommand);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, GetParameter);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, SetParameter);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, GetConfig);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, SetConfig);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, GetExtensionIndex);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, GetState);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, UseBuffer);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, AllocateBuffer);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, FreeBuffer);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, EmptyThisBuffer);
++    OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, FillThisBuffer);
++    //OMX_PROXY_BIND (iOmxComponent, ipComponentProxy, SetCallbacks);
++    iOmxComponent.SetCallbacks = BaseComponentSetCallbacks;
++
++    /* ...specify component version */
++    iOmxComponent.nVersion.s.nVersionMajor = SPECVERSIONMAJOR;
++    iOmxComponent.nVersion.s.nVersionMinor = SPECVERSIONMINOR;
++    iOmxComponent.nVersion.s.nRevision = SPECREVISION;
++    iOmxComponent.nVersion.s.nStep = SPECSTEP;
++
++    /***************************************************************************
++     * Private data initialization
++     **************************************************************************/
++
++    /* ...release private application data if set */
++    (ipAppPriv ? oscl_free(ipAppPriv), 1 : 0);
++    
++    /* ...allocate private data */
++    if ((ipAppPriv = (ComponentPrivateType*)oscl_malloc(sizeof(ComponentPrivateType))) == NULL)
++    {
++        return TRACE (ERROR, _x("Insufficient resources")), OMX_ErrorInsufficientResources;
++    }
++
++    /***************************************************************************
++     * Construct base class
++     **************************************************************************/
++
++    if ((Status = ConstructBaseComponent(pAppData)) != OMX_ErrorNone)
++    {
++        /* ...failed to construct base class; retreat */
++        return TRACE (ERROR, _x("ConstructBaseComponent failed with status: %d"), Status), Status;
++    }
++
++    /***************************************************************************
++     * Generic audio decoder ports initialization
++     **************************************************************************/
++
++    pInPort = ipPorts[OMX_PORT_INPUTPORT_INDEX], pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++
++    /* ...totally we have two ports */
++    iPortTypesParam.nPorts = 2, iPortTypesParam.nStartPortNumber = 0;
++
++    /***************************************************************************
++     * Input port (partial) configuration - to-be-adjusted in derived class
++     **************************************************************************/
++
++    pInPort->PortParam.nPortIndex = OMX_PORT_INPUTPORT_INDEX;
++    pInPort->PortParam.eDomain = OMX_PortDomainAudio;
++    pInPort->PortParam.format.audio.cMIMEType = (OMX_STRING) "audio/mpeg";
++    pInPort->PortParam.format.audio.pNativeRender = 0;
++    pInPort->PortParam.format.audio.bFlagErrorConcealment = OMX_TRUE;
++    pInPort->PortParam.eDir = OMX_DirInput;
++    pInPort->PortParam.nBufferCountMin = 1;
++    pInPort->PortParam.bEnabled = OMX_TRUE;
++    pInPort->PortParam.bPopulated = OMX_FALSE;
++
++    /***************************************************************************
++     * Output port configuartion
++     **************************************************************************/
++
++    pOutPort->PortParam.nPortIndex = OMX_PORT_OUTPUTPORT_INDEX;
++    pOutPort->PortParam.eDomain = OMX_PortDomainAudio;
++    pOutPort->PortParam.format.audio.cMIMEType = (OMX_STRING)"raw";
++    pOutPort->PortParam.format.audio.pNativeRender = 0;
++    pOutPort->PortParam.format.audio.bFlagErrorConcealment = OMX_TRUE;
++    pOutPort->PortParam.format.audio.eEncoding = OMX_AUDIO_CodingPCM;
++    pOutPort->PortParam.eDir = OMX_DirOutput;
++    pOutPort->PortParam.nBufferCountMin = 1;
++    pOutPort->PortParam.bEnabled = OMX_TRUE;
++    pOutPort->PortParam.bPopulated = OMX_FALSE;
++
++    /***************************************************************************
++     * Output port PCM configuartion
++     **************************************************************************/
++
++    pOutPort->AudioPcmMode.nPortIndex = OMX_PORT_OUTPUTPORT_INDEX;
++    pOutPort->AudioPcmMode.nChannels = 2;
++    pOutPort->AudioPcmMode.eNumData = OMX_NumericalDataSigned;
++    pOutPort->AudioPcmMode.bInterleaved = OMX_TRUE;
++    pOutPort->AudioPcmMode.nBitPerSample = 16;
++    pOutPort->AudioPcmMode.nSamplingRate = 44100;
++    pOutPort->AudioPcmMode.ePCMMode = OMX_AUDIO_PCMModeLinear;
++    pOutPort->AudioPcmMode.eChannelMapping[0] = OMX_AUDIO_ChannelLF;
++    pOutPort->AudioPcmMode.eChannelMapping[1] = OMX_AUDIO_ChannelRF;
++
++    SetHeader(&pInPort->AudioParam, sizeof(OMX_AUDIO_PARAM_PORTFORMATTYPE));
++
++    pInPort->AudioParam.nPortIndex = 0;
++    pInPort->AudioParam.nIndex = 0;
++
++    SetHeader(&pOutPort->AudioParam, sizeof(OMX_AUDIO_PARAM_PORTFORMATTYPE));
++
++    pOutPort->AudioParam.nPortIndex = 1;
++    pOutPort->AudioParam.nIndex = 0;
++    pOutPort->AudioParam.eEncoding = OMX_AUDIO_CodingPCM;
++
++    /***************************************************************************
++     * Decoder low-level initialization
++     **************************************************************************/
++
++    /* ...mark there is no result from decoder yet (tbd) */
++    iDecodeReturn = OMX_FALSE;
++
++    /* ...reset DSP handles */
++    hEngine = NULL, hAd = NULL, hDSPBuffer = NULL, hOutBufTab = NULL;
++
++    /***************************************************************************
++     * Initialization completed successfully
++     **************************************************************************/
++
++    return TRACE (INIT, _b("Component constructed successfully")), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DestroyComponent
++ *
++ * This function is called by the framework in response to call to FreeHandle
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::DestroyComponent (void)
++{
++    /***************************************************************************
++     * Perform component deinitialization as appropriate
++     **************************************************************************/
++
++    (iIsInit != OMX_FALSE ? ComponentDeInit(), 1 : 0);    
++
++    /***************************************************************************
++     * Destroy the base class now
++     **************************************************************************/
++
++    DestroyBaseComponent();
++
++    /***************************************************************************
++     * Release private application data
++     **************************************************************************/
++
++    (ipAppPriv ? ipAppPriv->CompHandle = NULL, oscl_free(ipAppPriv), ipAppPriv = NULL : 0);
++
++    /***************************************************************************
++     * Component destroyed
++     **************************************************************************/
++
++    return TRACE (INIT, _b("Component destroyed")), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::BufferMgmtFunction
++ *
++ * Buffer management function
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::BufferMgmtFunction (void)
++{
++    OMX_COMPONENTTYPE  *pHandle = &iOmxComponent;
++    QueueType          *pInputQueue = ipPorts[OMX_PORT_INPUTPORT_INDEX]->pBufferQueue;
++    QueueType          *pOutputQueue = ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->pBufferQueue;
++    ComponentPortType  *pInPort = (ComponentPortType*) ipPorts[OMX_PORT_INPUTPORT_INDEX];
++    ComponentPortType  *pOutPort = (ComponentPortType*) ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++    OMX_BOOL            ResizeNeeded = OMX_FALSE;
++
++    TRACE (DEBUG, _b(">> Buffer management: IBE:%d EOF:%d EOS:%d (in:%u out:%u)"), (iIsInputBufferEnded == OMX_TRUE ? 1 : 0), (iEndOfFrameFlag == OMX_TRUE ? 1 : 0), (iEndofStream == OMX_TRUE ? 1 : 0), (unsigned)GetQueueNumElem(pInputQueue), (unsigned)GetQueueNumElem(pOutputQueue));
++
++    /***************************************************************************
++     * Checking for resize flag
++     **************************************************************************/
++
++    /* ...we are still pending */
++    if (iResizePending == OMX_TRUE) goto exit;
++
++    /***************************************************************************
++     * Input data processing
++     **************************************************************************/
++
++    if (iEndofStream == OMX_FALSE && iEndOfFrameFlag == OMX_FALSE && iSendOutBufferAfterPortReconfigFlag == OMX_FALSE)
++    {
++        /***********************************************************************
++         * Check out if there is a pending input buffer and decoding is done
++         **********************************************************************/
++
++        if (GetQueueNumElem(pInputQueue) > 0)
++        {
++            /*******************************************************************
++             * Retrieve new input buffer from the queue
++             ******************************************************************/
++
++            if ((ipInputBuffer = (OMX_BUFFERHEADERTYPE*) DeQueue(pInputQueue)) == NULL)
++            {
++                /* ...error is fatal? */
++                TRACE (ERROR, _b("Failed to dequeue input buffer"));
++
++                goto error;
++            }
++            else
++            {
++                TRACE (DEBUG, _b("New input buffer[%p] received: offset=%u, filled=%u, flags=%X, ts=%u"), ipInputBuffer, (unsigned)ipInputBuffer->nOffset, (unsigned)ipInputBuffer->nFilledLen, (unsigned)ipInputBuffer->nFlags, (unsigned)ipInputBuffer->nTimeStamp);
++                
++                /* ...check for end-of-stream flag */
++                (ipInputBuffer->nFlags & OMX_BUFFERFLAG_EOS ? TRACE (DATA, _b("End-of-stream flag received")), iEndofStream = OMX_TRUE : 0);
++
++                /* ...check for end-of-frame flag */
++                (ipInputBuffer->nFlags & OMX_BUFFERFLAG_ENDOFFRAME ? TRACE (DATA, _b("End-of-frame flag received")), iEndOfFrameFlag = OMX_TRUE : 0);
++            }
++            
++            /*******************************************************************
++             * Process the buffer retrieved
++             ******************************************************************/
++
++            if (DSPPut(ipInputBuffer) == OMX_FALSE)
++            {
++                TRACE (ERROR, _b("Frame is too long; fatal error"));
++           
++                goto error;
++            }
++
++            /*******************************************************************
++             * Process mark data (to-be-understood)
++             ******************************************************************/
++            
++            /* ...save marking data associated with incoming buffer */
++            if (iTargetMarkData = ipInputBuffer->pMarkData, (ipTargetComponent = (OMX_COMPONENTTYPE*) ipInputBuffer->hMarkTargetComponent) == pHandle)
++            {
++                TRACE (INFO, _b("Issue mark notification"));
++
++                /* ...notify framework about marking data processing (and pass it down the stack?) */
++                (*(ipCallbacks->EventHandler)) (pHandle, iCallbackData, OMX_EventMark, 1, 0, iTargetMarkData);
++            }
++
++            /*******************************************************************
++             * Release input buffer to the framework
++             ******************************************************************/
++
++            ReturnInputBuffer (ipInputBuffer, pInPort);
++        }
++    }
++
++    /***************************************************************************
++     * Decoding task
++     **************************************************************************/
++
++    if (iEndOfFrameFlag == OMX_TRUE && iSendOutBufferAfterPortReconfigFlag == OMX_FALSE)
++    {
++        /***********************************************************************
++         * We have filled input buffer and available output buffer
++         **********************************************************************/
++
++        /* ...call DSP engine, check for decoding error (input path may become enabled) */
++        PC_START (PROCESS), iDecodeReturn = DSPProcess (&ipPorts[OMX_PORT_OUTPUTPORT_INDEX]->PortParam, &ResizeNeeded), PC_STOP (PROCESS);
++        
++        /***********************************************************************
++         * Process decoding error 
++         **********************************************************************/
++
++        if (!iDecodeReturn && OMX_FALSE == iEndofStream)
++        {
++            TRACE (INFO, _b("Issue ErrorStreamCorrupt event"));
++                
++            /* ...issue a callback to framework */
++            (*(ipCallbacks->EventHandler)) (pHandle, iCallbackData, OMX_EventError, OMX_ErrorStreamCorrupt, 0, NULL);
++        }
++
++        /***********************************************************************
++         * Process resize event (tbd) 
++         **********************************************************************/
++
++        if (ResizeNeeded == OMX_TRUE)
++        {
++            DSPResize (hOutBuf);
++        }
++    }
++
++    /* ...resize completed */
++    if (iSendOutBufferAfterPortReconfigFlag == OMX_TRUE)
++    {
++        TRACE (INFO, _b("Buffer reconfiguration is completed"));
++
++        iSendOutBufferAfterPortReconfigFlag = OMX_FALSE;
++    }
++
++    /***************************************************************************
++     * Output data processing
++     **************************************************************************/
++
++    if (ipOutputBuffer || GetQueueNumElem(pOutputQueue) != 0)
++    {
++        /***********************************************************************
++         * Output buffer is available; get it from the pool as necessary
++         **********************************************************************/
++
++        if (ipOutputBuffer == NULL)
++        {
++            /*******************************************************************
++             * Take new buffer from the pool
++             ******************************************************************/
++
++            if ((ipOutputBuffer = (OMX_BUFFERHEADERTYPE*)DeQueue(pOutputQueue)) == NULL)
++            {
++                /***************************************************************
++                 * Failed to get output buffer from pool
++                 **************************************************************/
++
++                TRACE (ERROR, _b("Failed to get the output pool; error"));
++
++                goto error;
++            }
++            else if (ipOutputBuffer->nAllocLen < (OMX_U32)(8096))
++            {
++                /***************************************************************
++                 * Do not proceed if the output buffer can't fit the raw data 
++                 **************************************************************/
++
++                TRACE (DATA, _b("Output buffer cannot accomodate raw frame; skip processing"));
++
++                /* ...put output buffer back to the pool */
++                ipOutputBuffer->nFilledLen = 0, ReturnOutputBuffer(ipOutputBuffer, pOutPort), ipOutputBuffer = NULL;
++
++                goto exit;
++            }
++            else
++            {
++                /***************************************************************
++                 * Prepare to use the output buffer
++                 **************************************************************/
++
++                ipOutputBuffer->nFilledLen = 0, ipOutputBuffer->nOffset = 0;
++            }
++        }
++    
++        TRACE (DATA, _b("Use output buffer: %p"), ipOutputBuffer);
++        
++        /***********************************************************************
++         * Pass mark command down the stack as needed
++         **********************************************************************/
++
++        if (ipMark != NULL)
++        {
++            TRACE (INFO, _b("Marking data is set: (%p,%p)"), ipMark->hMarkTargetComponent, ipMark->pMarkData);
++            
++            /* ...put marking data to output buffer */
++            ipOutputBuffer->hMarkTargetComponent = ipMark->hMarkTargetComponent, ipOutputBuffer->pMarkData = ipMark->pMarkData;
++
++            /* ...and clear marking flag */
++            ipMark = NULL;
++        }
++
++        /***********************************************************************
++         * Process derived mark data (to-be-understood)
++         **********************************************************************/
++
++        if (ipTargetComponent != NULL)
++        {
++            TRACE (INFO, _b("Marking data is derived: (%p,%p)"), ipMark->hMarkTargetComponent, ipMark->pMarkData);
++
++            /* ...pass marking data down the stack */
++            ipOutputBuffer->hMarkTargetComponent = ipTargetComponent, ipOutputBuffer->pMarkData = iTargetMarkData;
++
++            /* ...and clear derived marking data request */
++            ipTargetComponent = NULL;
++        }
++
++        /***********************************************************************
++         * Retrieve the data from decoder if possible
++         **********************************************************************/
++        /* ...do not check actual result code */
++        if (ResizeNeeded == OMX_FALSE)
++        {
++            DSPGet (ipOutputBuffer);
++        }
++
++        /* ...set the timestamp equal to the latest input buffer timestamp (is it valid?) */
++        ipOutputBuffer->nTimeStamp = iFrameTimestamp;
++
++        /***********************************************************************
++         * If EOS flag has come from the client & there are no more
++         * input buffers to decode, send the callback to the client
++         **********************************************************************/
++
++        if (OMX_TRUE == iEndofStream)
++        {
++            /* ...place end-of-stream flag onto output buffer */
++            ipOutputBuffer->nFlags |= OMX_BUFFERFLAG_EOS;
++
++            if (!iDecodeReturn)
++            {
++                TRACE (INFO, _b("Issue EOS notification"));
++                
++                /* ...pass EOS-notification to the framework */
++                (*(ipCallbacks->EventHandler)) (pHandle, iCallbackData, OMX_EventBufferFlag, 1, OMX_BUFFERFLAG_EOS, NULL);
++
++                /* ...reset end-of-stream flag and request new input buffer */
++                iEndofStream = OMX_FALSE;
++
++                /* ...put output buffer back to the pool */
++                ReturnOutputBuffer (ipOutputBuffer, pOutPort), ipOutputBuffer = NULL;
++
++                return;
++            }
++            else
++            {
++                TRACE (PROCESS, _b("Stream processed"));
++            
++                /* ...pass EOS-notification to the framework */
++                (*(ipCallbacks->EventHandler)) (pHandle, iCallbackData, OMX_EventBufferFlag, 1, OMX_BUFFERFLAG_EOS, NULL);
++    
++                /* ...and pass it down the graph */
++                ReturnOutputBuffer (ipOutputBuffer, pOutPort), ipOutputBuffer = NULL;
++
++                /* ...and reschedule AO execution */
++                TRACE (PROCESS, _b("Decoding completed; reschedule AO")), RunIfNotReady();
++                
++                return;
++            }
++        }
++
++        /***********************************************************************
++         * Pass output buffer down the stack if it contains valid data
++         **********************************************************************/
++
++        if ((ipOutputBuffer->nFilledLen > 0) || (ResizeNeeded == OMX_TRUE))
++        {
++            TRACE (DATA, _b("Pass output buffer: %p - %u bytes, ts: %u"), ipOutputBuffer->pBuffer, (unsigned)ipOutputBuffer->nFilledLen, (unsigned)ipOutputBuffer->nTimeStamp);
++            
++            ReturnOutputBuffer (ipOutputBuffer, pOutPort), ipOutputBuffer = NULL;
++        }
++    }
++
++exit:
++
++    /***************************************************************************
++     * Processing completed
++     **************************************************************************/
++
++    if (((GetQueueNumElem(pInputQueue) > 0 && iEndOfFrameFlag == OMX_FALSE) || (iEndOfFrameFlag == OMX_TRUE && GetQueueNumElem(pOutputQueue) > 0)) && (ResizeNeeded == OMX_FALSE))
++    {
++        TRACE (PROCESS, _b("Reschedule AO execution")), RunIfNotReady();
++    }
++
++    TRACE (DEBUG, _b("<< Buffer management: IBE:%d EOF:%d EOS:%d"), (iIsInputBufferEnded == OMX_TRUE ? 1 : 0), (iEndOfFrameFlag == OMX_TRUE ? 1 : 0), (iEndofStream == OMX_TRUE ? 1 : 0));
++
++    return;
++
++error:
++
++    /***************************************************************************
++     * Processing completed with error (to-be-defined)
++     **************************************************************************/
++    
++    BUG (1, _b("Buffer management function completed with error"));
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::ProcessData
++ *
++ * Data processing stub (it is pure virtual function)
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::ProcessData (void)
++{
++    /* ...dead code */
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::CalculateBufferParameters
++ *
++ * Calculate output buffer parameters
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::CalculateBufferParameters (OMX_U32 PortIndex)
++{
++    /* to-be-understood */
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::BaseComponentAllocateBuffer
++ *
++ * Static function used by framework to allocate output buffer
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::BaseComponentAllocateBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes)
++{
++    OmxDspAudioDecoder     *d = (OmxDspAudioDecoder*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
++    ComponentPortType      *p = d->ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++    OMX_BUFFERHEADERTYPE   *b;
++    OMX_U32                 i;
++    
++    /***************************************************************************
++     * Parameters validation
++     **************************************************************************/
++
++    /* ...check the pointer is non-null */
++    if (d == NULL)      return TRACE (ERROR, _x("Null-pointer passed")), OMX_ErrorBadParameter;
++
++    /* ...check the port is output */
++    if (nPortIndex != OMX_PORT_OUTPUTPORT_INDEX)    return TRACE (ERROR, _b("Invalid port number: %d"), (int)nPortIndex), OMX_ErrorBadPortIndex;
++    
++    /* ...check port state */
++    if (p->TransientState != OMX_StateIdle)     return TRACE (ERROR, _b("Incorrect port state: %d"), (int)p->TransientState), OMX_ErrorIncorrectStateTransition;
++
++    /* ...check requested buffer size */
++    if (nSizeBytes < p->PortParam.nBufferSize)  return TRACE (ERROR, _b("Requested buffer size is less then minimum size: %d < %d"), (int)nSizeBytes, (int)p->PortParam.nBufferSize), OMX_ErrorBadParameter;
++
++    /* ...check out if amount of allocated buffer is too high */
++    if ((i = p->NumAssignedBuffers) >= p->PortParam.nBufferCountActual)   return TRACE (ERROR, _b("Attempt to allocate too much buffers")), OMX_ErrorInsufficientResources;
++    
++    /***************************************************************************
++     * Check out if this is first allocation
++     **************************************************************************/
++    
++    if (p->pBuffer == NULL)
++    {
++        /* ...create headers pool */
++        if ((p->pBuffer = (OMX_BUFFERHEADERTYPE**) oscl_calloc(p->PortParam.nBufferCountActual, sizeof(OMX_BUFFERHEADERTYPE*))) == NULL)
++        {
++            /* ...failed to allocate memory */
++            return TRACE (ERROR, _x("Failed to allocate buffer pool")), OMX_ErrorInsufficientResources;
++        }
++
++        /* ...allocate buffer states pool */
++        if ((p->BufferState = (OMX_U32*) oscl_calloc(p->PortParam.nBufferCountActual, sizeof(OMX_U32))) == NULL)
++        {
++            return TRACE (ERROR, _x("Failed to allocate buffer pool")), OMX_ErrorInsufficientResources;
++        }
++    }
++
++    /***************************************************************************
++     * Allocate buffer header
++     **************************************************************************/
++
++    if ((b = (OMX_BUFFERHEADERTYPE*) oscl_malloc(sizeof(OMX_BUFFERHEADERTYPE))) == NULL)
++    {
++        return TRACE (ERROR, _x("Failed to allocate buffer header")), OMX_ErrorInsufficientResources;
++    }
++    else
++    {
++        /* ...initialize buffer header */
++        d->SetHeader (b, sizeof(OMX_BUFFERHEADERTYPE));
++            
++        /* ...memory for buffer is NOT allocated but will be taken from DMAI */
++        b->nAllocLen = nSizeBytes, b->nFlags = 0, b->pPlatformPrivate = NULL, b->pAppPrivate = pAppPrivate, b->pBuffer = NULL;
++        
++        /* ...assign proper port indices */
++        b->nInputPortIndex = d->iNumPorts, b->nOutputPortIndex = nPortIndex;
++    }
++    
++    /***************************************************************************
++     * Process port direction (better comment is welcomed)
++     **************************************************************************/
++
++#if 0 /* OpenCORE 2.0.7 */
++    if ((b->pOutputPortPrivate = oscl_malloc(sizeof(BufferCtrlStruct))) == NULL)
++    {
++        /* ...destroy buffer itself */
++        oscl_free (b);
++            
++        /* ...and return failure */
++        return TRACE (ERROR, _b("Failed to allocate buffer control structure")), OMX_ErrorInsufficientResources;
++    }
++    else
++    {
++        BufferCtrlStruct   *pBCTRL = (BufferCtrlStruct*) b->pOutputPortPrivate;
++
++        /* ...initialize reference counter to 1 (since buffers are initially with the IL client) */
++        pBCTRL->iRefCount = 1, pBCTRL->iIsBufferInComponentQueue = OMX_FALSE;
++    }
++#endif
++    
++    /***************************************************************************
++     * Mark the buffer is allocated
++     **************************************************************************/
++
++    /* ...the header is allocated and the buffer is assigned */
++    p->BufferState[i] = BUFFER_ASSIGNED | HEADER_ALLOCATED, *pBuffer = (p->pBuffer[i] = b);
++     
++    /***************************************************************************
++     * Populate port as appropriate
++     **************************************************************************/
++
++    if ((p->NumAssignedBuffers = i + 1) == p->PortParam.nBufferCountActual)
++    {
++        /* ...set "populated" flag */
++        p->PortParam.bPopulated = OMX_TRUE;
++
++        /* ...reschedule the AO for a state change (Loaded->Idle) if its pending on buffer allocation */
++        (OMX_TRUE == d->iStateTransitionFlag ? d->RunIfNotReady(), d->iStateTransitionFlag = OMX_FALSE : 0);
++    }
++
++    /***************************************************************************
++     * Return success result code
++     **************************************************************************/
++    
++    return TRACE (INIT, _b("Output buffer #%d allocated: %p"), (int)i, *pBuffer), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::BaseComponentFillThisBuffer
++ *
++ * Add output buffer to the output queue
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::BaseComponentFillThisBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE* pBuffer)
++{
++    OmxDspAudioDecoder     *d = (OmxDspAudioDecoder*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
++    QueueType              *queue;
++    Int8                   *p;
++    OMX_U32                 idx;
++    OMX_ERRORTYPE           result;
++
++    TRACE (INFO, _b(">> Fill this buffer"));
++    
++    /***************************************************************************
++     * Parameters validation
++     **************************************************************************/
++
++    /* ...check the pointer is non-null */
++    if (d == NULL)      return TRACE (ERROR, _x("Null-pointer passed")), OMX_ErrorBadParameter;
++
++    /* ...validate port index (should be queued to output port only) */
++    if ((idx = pBuffer->nOutputPortIndex) >= d->iNumPorts || d->ipPorts[idx]->PortParam.eDir != OMX_DirOutput)  return TRACE (ERROR, _x("Bad port index: %u"), (unsigned)idx), OMX_ErrorBadPortIndex;
++
++    /* ...check port state */
++    if (d->iState != OMX_StateExecuting && d->iState != OMX_StatePause && d->iState != OMX_StateIdle) return TRACE (ERROR, _x("Invalid state: %d"), (int)d->iState), OMX_ErrorIncorrectStateOperation;
++
++    /* ...port should be in enabled state before accepting buffers */
++    if (!PORT_IS_ENABLED(d->ipPorts[idx]))  return TRACE (ERROR, _x("Port is disabled")), OMX_ErrorIncorrectStateOperation;
++
++    /* ...check the header is valid */
++    if ((result = d->CheckHeader(pBuffer, sizeof(OMX_BUFFERHEADERTYPE))) != OMX_ErrorNone) return TRACE (ERROR, _x("Wrong header: %d"), (int)result), result;
++
++    /***************************************************************************
++     * Release buffer back to the DSP pool as required
++     **************************************************************************/
++
++    d->DSPRelease (pBuffer);
++    
++    /***************************************************************************
++     * Add buffer to the output queue
++     **************************************************************************/
++
++    if (Queue (d->ipPorts[idx]->pBufferQueue, pBuffer) != OMX_ErrorNone)
++    {
++        return TRACE (ERROR, _x("Failed to queue buffer %p"), pBuffer), OMX_ErrorInsufficientResources;
++    }
++#if 0 /* OpenCORE 2.0.7 */
++    else
++    {
++        BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(pBuffer->pOutputPortPrivate);
++
++        /* ...mark the buffer is enqueued */
++        pBCTRL->iIsBufferInComponentQueue = OMX_TRUE;
++
++        /* ...increase amount of available buffers (owned exclusively by AO) */
++        (--pBCTRL->iRefCount == 0 ? d->iNumAvailableOutputBuffers++ : 0);
++    }
++#endif
++
++    /***************************************************************************
++     * Increment amount of available buffers and reschedule AO as appropriate
++     **************************************************************************/
++
++    (d->iOutBufferCount++ == 0 ? TRACE (DATA, _b("Reschedule AO")), d->RunIfNotReady(), 1 : 0);
++
++    /***************************************************************************
++     * Return final result code
++     **************************************************************************/
++
++    return TRACE (DATA, _b("Output buffer %p available (%d)"), pBuffer, (int)d->iOutBufferCount), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::BaseComponentFreeBuffer
++ *
++ * Static function used by framework to free output buffer
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::BaseComponentFreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer)
++{
++    OmxDspAudioDecoder     *d = (OmxDspAudioDecoder*)((OMX_COMPONENTTYPE*)hComponent)->pComponentPrivate;
++    ComponentPortType      *p = d->ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++    int                     i;
++
++    /***************************************************************************
++     * Parameters validation
++     **************************************************************************/
++
++    /* ...check the pointer is non-null */
++    if (d == NULL)      return TRACE (ERROR, _x("Null-pointer passed")), OMX_ErrorBadParameter;
++
++    /* ...check the port is output (redirect to base function if not) */
++    if (nPortIndex != OMX_PORT_OUTPUTPORT_INDEX)    return OmxComponentBase::BaseComponentFreeBuffer (hComponent, nPortIndex, pBuffer);
++
++    /* ...check out if we do have buffer to free (still return success) */
++    if ((i = p->NumAssignedBuffers - 1) < 0)    return TRACE (ERROR, _b("No buffers to free")), OMX_ErrorNone;
++    
++    /* ...mek sure buffer state is valid */
++    if ((p->BufferState[i] & (BUFFER_ASSIGNED | HEADER_ALLOCATED)) != (BUFFER_ASSIGNED | HEADER_ALLOCATED)) return TRACE (ERROR, _x("Invalid buffer state: %lX"), p->BufferState[i]), OMX_ErrorBadParameter;
++
++    /***************************************************************************
++     * Check the port state 
++     ***************************************************************************/
++
++    if (p->TransientState != OMX_StateLoaded && p->TransientState != OMX_StateInvalid)
++    {
++        TRACE (DATA, _b("Issue unpopulate event for output port"));
++        
++        /* ...issue proper notification to the framework (OMX_CommandStateSet completes with error) */
++        (*(d->ipCallbacks->EventHandler)) (hComponent, d->iCallbackData, OMX_EventError, OMX_ErrorPortUnpopulated, nPortIndex, NULL);
++    }
++
++    /***************************************************************************
++     * Release the buffer
++     **************************************************************************/
++
++    /* ...deallocate control structure (it is an output port) */
++    oscl_free (pBuffer->pOutputPortPrivate), pBuffer->pOutputPortPrivate = NULL;
++
++    /* ...deallocate header itself */
++    oscl_free (pBuffer);
++
++    /* ...mark the buffer is free */
++    p->BufferState[i] = BUFFER_FREE;
++
++    /***************************************************************************
++     * Check out if this was the last allocated buffer
++     **************************************************************************/
++
++    if ((p->NumAssignedBuffers = (OMX_U32)i) == 0)
++    {
++        /* ...no more buffers; unpopulate the port */
++        p->PortParam.bPopulated = OMX_FALSE;
++
++        /* ...reschedule the AO for a state change (Idle->Loaded) if its pending on buffer de-allocation */
++        (OMX_TRUE == d->iStateTransitionFlag ? d->RunIfNotReady(), d->iStateTransitionFlag = OMX_FALSE, d->iNewOutBufRequired = OMX_TRUE : 0);
++
++        /* ...destroy buffer pool */
++        oscl_free (p->pBuffer), p->pBuffer = NULL;
++        
++        /* ...and states pool */
++        oscl_free (p->BufferState), p->BufferState = NULL;
++    }
++
++    /***************************************************************************
++     * Return final success result
++     **************************************************************************/
++
++    return TRACE (INIT, _b("Buffer %p freed"), pBuffer), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::ComponentInit
++ *
++ * Component initialization function (called by framework)
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::ComponentInit (void)
++{
++    OMX_ERRORTYPE   Status;
++
++    /***************************************************************************
++     * Check out sequence validness
++     **************************************************************************/
++
++    if (OMX_TRUE == iIsInit)    return TRACE (ERROR, _b("Component is already initialized")), OMX_ErrorIncorrectStateOperation;
++    
++    /***************************************************************************
++     * Codec initialization
++     **************************************************************************/
++
++    if (!iCodecReady)
++    {
++        /* ...initialize DSP codec */
++        if ((Status = DSPDecoderInit()) != OMX_ErrorNone)   return Status;
++        
++        /* ...mark the codec is ready */
++        iCodecReady = OMX_TRUE;
++    }
++
++    /***************************************************************************
++     * Reset local variables
++     **************************************************************************/
++
++    /* ...current length of input buffer */
++    iInputCurrLength = 0;
++
++    /* ...reset frame count (used in dynamic port reconfiguration) */
++    iFrameCount = 0;
++
++    /***************************************************************************
++     * Initialization completed successfully
++     **************************************************************************/
++
++    return iIsInit = OMX_TRUE, TRACE (INIT, _b("Component initialization completed")), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::ComponentDeInit
++ *
++ * This function is called upon a transition to the idle or invalid state 
++ * (and by component destructor)
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::ComponentDeInit()
++{
++    /***************************************************************************
++     * Perform component deinitialization
++     **************************************************************************/
++
++    /* ...deinitialize codec if required */
++    (iCodecReady ? DSPDecoderClean(), iCodecReady = OMX_FALSE : 0);
++    
++    /***************************************************************************
++     * Deinitialization completed; report result code to caller
++     **************************************************************************/
++
++    return iIsInit = OMX_FALSE, TRACE (INIT, _b("Component deinitialization completed")), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::GetConfig
++ *
++ * Get current configuration
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspAudioDecoder::GetConfig (OMX_IN OMX_HANDLETYPE hComponent, OMX_IN OMX_INDEXTYPE nIndex, OMX_INOUT OMX_PTR pComponentConfigStructure)
++{
++    OSCL_UNUSED_ARG(hComponent);
++    OSCL_UNUSED_ARG(nIndex);
++    OSCL_UNUSED_ARG(pComponentConfigStructure);
++
++    return TRACE (DEBUG, _b("GetConfig - not implemented function")), OMX_ErrorNotImplemented;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::ResetComponent
++ *
++ * This routine will reset the decoder library and some of the associated flags
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::ResetComponent (void)
++{
++    TRACE (INFO, _b("Component reset - not implemented"));
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::OmxDspAudioDecoder
++ *
++ * Component object constructor
++ ******************************************************************************/
++
++OmxDspAudioDecoder::OmxDspAudioDecoder()
++{
++    TRACE (DEBUG, _b("Component[%p] constructed"), this);
++    
++    /* ...add component to scheduler */
++    (!IsAdded() ? AddToScheduler(), 1 : 0);
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::~OmxDspAudioDecoder
++ *
++ * Component object destructor
++ ******************************************************************************/
++
++OmxDspAudioDecoder::~OmxDspAudioDecoder()
++{
++    /* ...remove from scheduler as required */
++    (IsAdded() ? RemoveFromScheduler(), 1 : 0);
++
++    TRACE (DEBUG, _b("Component[%p] destructed"), this);
++}
++
++/*******************************************************************************
++ * DSP engine support
++ ******************************************************************************/
++
++/* ...buffer used by codec */
++#define OMX_DSP_CODEC_MASK              (1 << 0)
++
++/* ...buffer used by display */
++#define OMX_DSP_DISPLAY_MASK            (1 << 1)
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPDecoderInit
++ *
++ * Initialize DSP decoder 
++ ******************************************************************************/
++extern "C" {
++extern Engine_Handle global_engine_handle;
++}
++
++OMX_ERRORTYPE OmxDspAudioDecoder::DSPDecoderInit (void)
++{
++    Buffer_Attrs                    bAttrs = Buffer_Attrs_DEFAULT;
++    Engine_Error                    ec;
++
++    AUDDEC1_Params                  params = Adec1_Params_DEFAULT;
++    AUDDEC1_DynamicParams           dynParams = Adec1_DynamicParams_DEFAULT;
++    
++    /***************************************************************************
++     * Open DSP engine
++     **************************************************************************/
++
++    hEngine = global_engine_handle;
++
++    /***************************************************************************
++     * Open audio decoder interface
++     **************************************************************************/
++
++    /* ...open audio decoder interface */
++    if ((hAd = Adec1_create (hEngine, iDecoderName, &params, &dynParams)) == NULL)
++    {
++        TRACE (ERROR, _b("Failed to open decoder '%s'"), (char*)iDecoderName);
++
++        goto error;
++    }
++
++    /***************************************************************************
++     * Create input buffer
++     **************************************************************************/
++
++    if ((hDSPBuffer = Buffer_create ((iDSPBufferSize = Adec1_getInBufSize(hAd) * 10), &bAttrs)) == NULL)
++    {
++        TRACE (ERROR, _b("Failed to create input buffer"));
++        
++        goto error;
++    }
++    else
++    {
++        /* ...set buffer pointer and writing index */
++        pDSPBuffer = (OMX_U8*) Buffer_getUserPtr (hDSPBuffer), iDSPWriteIndex = 0, iDSPBufferOffset = 0;
++
++        TRACE (INIT, _b("Allocated input buffer: %u bytes"), (unsigned) iDSPBufferSize);
++    }    
++        
++    /***************************************************************************
++     * Create output buffers table (to-be-removed)
++     **************************************************************************/
++
++    /* ...create buffers table (16 buffers) */
++    if ((hOutBufTab = BufTab_create (24, Dmai_roundUp(Adec1_getOutBufSize(hAd), 128), &bAttrs)) == NULL)
++    {
++        TRACE (ERROR, _b("Failed to create output buffers table"));
++
++        goto error;
++    }
++    else
++    {
++        /* ...and bind it to decoder display buffers
++           Vdec2_setBufTab (hVd, hOutBufTab);
++         */
++
++        /* ...mark we do not have output buffer yet */
++        hOutBuf = hDispBuffer = NULL;
++    }
++
++    /***************************************************************************
++     * Codec initialization completed successfully
++     **************************************************************************/
++
++    return TRACE (INIT, _b("DSP AUDDEC1 codec initialized")), OMX_ErrorNone;
++
++error:
++
++    /***************************************************************************
++     * Initialization failed; perform cleanup
++     **************************************************************************/
++
++    DSPDecoderClean ();
++    
++    return TRACE (INIT, _b("Failed to initialize DSP AUDDEC1 codec")), OMX_ErrorInsufficientResources;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPDecoderClean
++ *
++ * Cleanup DSP decoder 
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::DSPDecoderClean (void)
++{
++    /***************************************************************************
++     * Release all allocated resources
++     **************************************************************************/
++
++    /* ...mark all buffers as free, destroy any resizing data and destroy codec engine */
++    (hAd ? BufTab_freeAll (hOutBufTab), BufTab_collapse (hOutBufTab), Adec1_delete(hAd), hAd = NULL : 0);
++
++    /* ...delete output buffer table if needed (TBD) */
++    (hOutBufTab ? BufTab_delete(hOutBufTab), hOutBufTab = NULL : 0);
++
++    /* ...delete input buffer */
++    if (iDSPBufferOffset > 0)
++    {
++        hDSPBuffer->userPtr -= iDSPBufferOffset;
++        hDSPBuffer->physPtr -= iDSPBufferOffset;
++        pDSPBuffer = (OMX_U8*) Buffer_getUserPtr (hDSPBuffer);
++    }
++    (hDSPBuffer ? Buffer_delete (hDSPBuffer), hDSPBuffer = NULL : 0);
++
++    /***************************************************************************
++     * Close all capturing stuff (impossible to leave open file handles)
++     **************************************************************************/
++
++    PC_CLOSE(PROCESS), PC_CLOSE(HOLD);
++
++    /***************************************************************************
++     * Cleanup sequence completed
++     **************************************************************************/
++
++    TRACE (INIT, _b("DSP AUDDEC1 decoder cleanup completed"));
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPPut
++ *
++ * Copy data from input buffer to DSP buffer
++ ******************************************************************************/
++
++OMX_BOOL OmxDspAudioDecoder::DSPPut (OMX_BUFFERHEADERTYPE* b)
++{
++    OMX_U32     n = b->nFilledLen;
++    OMX_U32     e;
++    
++    TRACE (DATA, _b("copy %u bytes: [%lu, %lu)"), (unsigned)n, iDSPWriteIndex, iDSPWriteIndex + n);
++    
++    /* ...check out there is enough room to store data (TBD) */
++    if ((e = iDSPWriteIndex + n) > iDSPBufferSize) return TRACE (DATA, _b("Input buffer to large")), OMX_FALSE;
++    
++    /* ...copy input buffer content into DSP-owned buffer */
++    oscl_memcpy (pDSPBuffer + iDSPWriteIndex, b->pBuffer + b->nOffset, n);
++    
++    /* ...set input buffer length and reset writing pointer (keep NAL start code) for a final chunk */
++    (iEndOfFrameFlag == OMX_TRUE ? TRACE (DATA, _b("Received frame: %lu bytes"), e), Buffer_setNumBytesUsed (hDSPBuffer, e), e = 0 : 0);
++
++    /* ...advance writing index and return success result */
++    return iDSPWriteIndex = e, OMX_TRUE;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPGet
++ *
++ * Retrieve decoded data from DSP engine
++ ******************************************************************************/
++
++OMX_BOOL OmxDspAudioDecoder::DSPGet (OMX_BUFFERHEADERTYPE *b)
++{
++    /***************************************************************************
++     * Check out if there is available buffer to display
++     **************************************************************************/
++
++    if (hDispBuffer != NULL)
++    {
++        TRACE (DEBUG, _b("Use display buffer: %p"), hDispBuffer), Buffer_print (hDispBuffer);
++            
++        /* ...set private platform data */
++        b->pPlatformPrivate = (OMX_PTR*) hDispBuffer;
++            
++        /* ...set pointer to buffer memory and actual length */
++        b->pBuffer = (OMX_U8*) Buffer_getUserPtr(hDispBuffer), b->nFilledLen = Buffer_getNumBytesUsed(hDispBuffer);
++            
++        /* ...increment frame count and resize buffer table if this is the very first frame */
++        (iFrameCount++ == 0 ? /*DSPResize (hOutBuf)*/ 1 /*, *aResizeFlag = OMX_TRUE */: 0);
++
++        /* ...capture start time of buffer holding time */
++        (OMX_DSP_PC && hDispBuffer == BufTab_getBuf(hOutBufTab, 0) ?  PC_START(HOLD), 1 : 0);
++        
++        /* ...no need more hDispBuffer pointer */
++        hDispBuffer = NULL;
++        
++        return OMX_TRUE;
++    }
++    else
++    {
++        return TRACE (DEBUG, _b("Nothing to display")), OMX_FALSE;
++    }
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPResize
++ *
++ * Reconfigure port params
++ ******************************************************************************/
++
++int OmxDspAudioDecoder::DSPResize (Buffer_Handle hBuf)
++{
++    /***************************************************************************
++    * Overloaded in child classes
++    **************************************************************************/
++
++    return 0;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPProcess
++ *
++ * Audio decoding process
++ ******************************************************************************/
++OMX_BOOL OmxDspAudioDecoder::DSPProcess (OMX_PARAM_PORTDEFINITIONTYPE* aPortParam, OMX_BOOL *aResizeFlag)
++{
++    Buffer_Handle   hBuf;
++    Int             result;
++    Int             iBites_Before_Proc, iBites_After_Proc, iBites_Diff;
++
++    /***************************************************************************
++     * Make sure the input buffer contains data
++     **************************************************************************/
++
++    if ((iBites_Before_Proc = Buffer_getNumBytesUsed(hDSPBuffer)) == 0)    goto reset;
++    
++    /***************************************************************************
++     * Get output buffer from pool if needed
++     **************************************************************************/
++
++    if (hOutBuf == NULL)
++    {
++        if ((hOutBuf = BufTab_getFreeBuf(hOutBufTab)) == NULL)
++        {
++            /* ...keep input path disabled */
++            return TRACE (PROCESS, _b("No free DSP buffers")), OMX_TRUE;
++        }
++    }
++    
++    TRACE (DEBUG, _b("Use DSP buffer: %p"), hOutBuf);
++
++    /***************************************************************************
++     * Perform actual decoding
++     **************************************************************************/
++
++    if ((result = Adec1_process (hAd, hDSPBuffer, hOutBuf)) < 0)
++    {
++        /***********************************************************************
++         * Decoding error
++         **********************************************************************/
++
++        return TRACE (PROCESS, _b("Fatal processing error: %d"), result), OMX_FALSE;
++    }
++    else
++    {
++        /***********************************************************************
++         * Mark the output buffer needs to be taken from pool next time
++         **********************************************************************/
++
++        /* ...take display buffer if possible */
++//        if (result == 0)
++        {
++            iFrameTimestamp = ipInputBuffer->nTimeStamp;
++
++            /* ...audio frame decoded */
++            TRACE (PROCESS, _b("Audio frame decoded"));
++            
++            /* ...update display buffer if needed */
++            (hDispBuffer == NULL ? hDispBuffer = hOutBuf : 0);
++
++            /* ...getting processed bites */
++            iBites_After_Proc = Buffer_getNumBytesUsed(hDSPBuffer);
++
++            /* ...how many encoded bites remain in buffer */
++            iBites_Diff = iBites_Before_Proc - iBites_After_Proc;
++
++            /* ...update read/write params */
++            iDSPWriteIndex -= iBites_After_Proc;
++
++            if (iBites_Diff > 0)
++            {
++                iDSPBufferOffset += iBites_After_Proc;
++
++                /* ...change DSP buffer geometry and update user pointer */
++                hDSPBuffer->userPtr += iBites_After_Proc;
++                hDSPBuffer->physPtr += iBites_After_Proc;
++                pDSPBuffer = (OMX_U8*) Buffer_getUserPtr (hDSPBuffer);
++            }
++
++            TRACE (DEBUG, _b(" Bites before: %d; after: %d; DSPWriteIndex: %u; iDSPBufferOffset: %u"),
++                            iBites_Before_Proc, iBites_After_Proc, iDSPWriteIndex, iDSPBufferOffset);
++
++            Buffer_setNumBytesUsed(hDSPBuffer, iBites_Diff);
++
++            /* ...check if the end of DSP-buffer is nearly reached, copy encoded data to the beginning */
++            if ((iDSPBufferOffset + iBites_Diff) > (iDSPBufferSize - OMX_MAX_AUDIO_FRAME_SIZE))
++            {
++                /* ...reset DSP-buffer geometry and update user pointer */
++                hDSPBuffer->userPtr -= iDSPBufferOffset;
++                hDSPBuffer->physPtr -= iDSPBufferOffset;
++                pDSPBuffer = (OMX_U8*) Buffer_getUserPtr (hDSPBuffer);
++
++                /* ...copy encoded data to the beginning of the DSP-buffer */
++                memcpy(pDSPBuffer, pDSPBuffer + iDSPBufferOffset, iBites_Diff);
++                Buffer_setNumBytesUsed(hDSPBuffer, iBites_Diff);
++
++                /* ...reset reading offset */
++                iDSPBufferOffset = 0;
++            }
++
++            /* ...keep at least one default ADEC1 buffer size filled */
++            if ((iBites_Diff < (iDSPBufferSize / 10)) || (iEndofStream == OMX_TRUE))
++            {
++                iDSPWriteIndex = iBites_Diff;
++                iEndOfFrameFlag = OMX_FALSE;
++            }
++
++            /* ...resize audio if possible */
++            (iFrameCount == 0 ? *aResizeFlag = OMX_TRUE, 1 : 0);
++        } //else
++        if (result == Dmai_EBITERROR)
++        {
++            TRACE (PROCESS, _b("Corrupted stream %d"), result);
++            BufTab_freeBuf (hOutBuf);
++        }
++
++        /* ...request new buffer */
++        hOutBuf = NULL;
++    }
++ 
++reset:
++   
++    /***************************************************************************
++     * Enable input path and return success decoding status
++     **************************************************************************/
++
++    return OMX_TRUE;
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPRelease
++ *
++ * Release output buffer back to the pool
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::DSPRelease (OMX_BUFFERHEADERTYPE *b)
++{
++    Buffer_Handle   hBuf;
++    
++    /* ...check out if platform private data is set */
++    if ((hBuf = (Buffer_Handle)b->pPlatformPrivate) != NULL)
++    {
++        /* ...mark the buffer is not owned by renderer anymore */
++        BufTab_freeBuf (hBuf);
++
++        /* ...capture stop time of buffer holding time */
++        (OMX_DSP_PC && hBuf == BufTab_getBuf(hOutBufTab, 0) ? PC_STOP(HOLD), 1 : 0);
++
++        TRACE (DEBUG, _b("Release DSP buffer: %p"), hBuf);
++    }
++}
++
++/*******************************************************************************
++ * OmxDspAudioDecoder::DSPFlush
++ *
++ * Flush audio decoder 
++ ******************************************************************************/
++
++void OmxDspAudioDecoder::DSPFlush (void)
++{
++    /*
++     * Not implemented in Adec1 API, dead code...
++     */   
++ 
++    TRACE (PROCESS, _b("Audio decoder flushed"));
++}
+diff -pruN a/omx_ti/audio/omx-dsp-audio.h b/omx_ti/audio/omx-dsp-audio.h
+--- a/omx_ti/audio/omx-dsp-audio.h	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx-dsp-audio.h	2010-09-24 21:11:53.000000000 +0400
+@@ -0,0 +1,196 @@
++/*******************************************************************************
++ * omx-dsp-audio.h
++ *
++ * Definition of base class for DSP-accelerated audio decoder. 
++ *
++ * Copyright (C) 2010 Alexander Smirnov <asmirnov.bluesman@gmail.com>
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ ******************************************************************************/
++
++#ifndef __OMX_DSP_AUDIO_H
++#define __OMX_DSP_AUDIO_H
++
++/*******************************************************************************
++ * Includes
++ ******************************************************************************/
++
++/* ...opencore headers */
++#include "oscl_base.h"
++#include "OMX_Types.h"
++#include "pv_omxdefs.h"
++#include "omx_proxy_interface.h"
++#include "oscl_dll.h"
++#include "pv_omxcomponent.h"
++
++/* ...DMAI headers */
++#include <xdc/std.h>
++#include <ti/sdo/ce/Engine.h>
++#include <ti/sdo/ce/CERuntime.h>
++#include <ti/sdo/dmai/Dmai.h>
++#include <ti/sdo/dmai/ce/Adec1.h>
++#include <ti/sdo/dmai/Buffer.h>
++#include <ti/sdo/dmai/BufTab.h>
++
++/* ...maximum frame size, must be equals max(aac, mp3) */
++#define OMX_MAX_AUDIO_FRAME_SIZE 4096
++
++/*******************************************************************************
++ * Component definition
++ ******************************************************************************/
++
++class OmxDspAudioDecoder : public OmxComponentAudio
++{
++public:
++
++    /***************************************************************************
++     * Constructor / destructor
++     **************************************************************************/
++
++    OmxDspAudioDecoder ();
++    ~OmxDspAudioDecoder ();
++
++    /***************************************************************************
++     * Framework API
++     **************************************************************************/
++
++    /* ...base component constructor */
++    OMX_ERRORTYPE           ConstructComponent (OMX_PTR pAppData, OMX_PTR pProxy, OMX_STRING);
++
++    /* ...base component destructor */
++    OMX_ERRORTYPE           DestroyComponent (void);
++
++    /* ...component initialization routine */
++    OMX_ERRORTYPE           ComponentInit (void);
++
++    /* ...component deinitialization routine */
++    OMX_ERRORTYPE           ComponentDeInit (void);
++
++    /* ...get configuration (do we need that?) */
++    OMX_ERRORTYPE           GetConfig (OMX_HANDLETYPE hComponent, OMX_INDEXTYPE nIndex, OMX_PTR pComponentConfigStructure);
++
++    /* ...calculate output buffer parameters */
++    void                    CalculateBufferParameters (OMX_U32 PortIndex);
++
++    /* ...main processing function */
++    void                    BufferMgmtFunction (void);
++
++    /* ...specific processing function (stub) */
++    void                    ProcessData (void);
++
++    /* ...component reset routine */
++    void                    ResetComponent (void);
++
++    /* ...buffer allocation routine */
++    static OMX_ERRORTYPE    BaseComponentAllocateBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE** pBuffer, OMX_U32 nPortIndex, OMX_PTR pAppPrivate, OMX_U32 nSizeBytes);
++
++    /* ...buffer freeing routine */
++    static OMX_ERRORTYPE    BaseComponentFillThisBuffer (OMX_HANDLETYPE hComponent, OMX_BUFFERHEADERTYPE* pBuffer);
++
++    /* ...buffer freeing routine */
++    static OMX_ERRORTYPE    BaseComponentFreeBuffer (OMX_HANDLETYPE hComponent, OMX_U32 nPortIndex, OMX_BUFFERHEADERTYPE* pBuffer);
++
++protected:
++
++    /***************************************************************************
++     * Internal data
++     **************************************************************************/
++
++    /* ...codec server engine */
++	Engine_Handle           hEngine;
++
++    /* ...DMAI IVIDDEC2 interface handle */
++	Adec1_Handle            hAd;
++
++    /* ...output buffer */
++	BufTab_Handle           hOutBufTab;
++
++    /* ...reference to display buffer */
++    Buffer_Handle           hDispBuffer;
++
++    /* ...decoder engine name */
++    Char                   *iDecoderName;
++
++    /* ...decoding status? (to-be-understood) */
++    OMX_BOOL                iDecodeReturn;
++    
++    /* ...first data frame flag */
++    OMX_BOOL                iFirstDataFrame;
++    /***************************************************************************
++     * DSP input/output buffers data
++     **************************************************************************/
++
++    /* ...reference to active DSP output buffer */
++    Buffer_Handle           hOutBuf;    
++
++    /* ...buffer handle */
++    Buffer_Handle           hDSPBuffer;
++
++    /* ...pointer to the DSP buffer storage */
++    OMX_U8                 *pDSPBuffer;
++
++    /* ...current writing index */
++    OMX_U32                 iDSPWriteIndex;
++
++    /* ...DSP buffer storage size */
++    OMX_U32                 iDSPBufferSize;
++
++    /* ...encoded data offset from the head in DSP buffer */
++    OMX_U32                 iDSPBufferOffset;
++
++    /***************************************************************************
++     * Private functions
++     **************************************************************************/
++
++    /* ...initialize DSP decoder */
++    virtual OMX_ERRORTYPE   DSPDecoderInit (void);
++    
++    /* ...cleanup DSP decoder */
++    virtual void            DSPDecoderClean (void);
++
++    /* ...data-collection function */
++    virtual OMX_BOOL        DSPPut (OMX_BUFFERHEADERTYPE *b);
++
++    /* ...resize buffer table */
++    virtual int             DSPResize (Buffer_Handle hBuf);
++
++    /***************************************************************************
++     * Non-virtual DSP supporting functions
++     **************************************************************************/
++
++    /* ...data-retrieval function */
++    OMX_BOOL                DSPGet (OMX_BUFFERHEADERTYPE *b);
++    
++    /* ...audio decoding procedure */
++    OMX_BOOL                DSPProcess (OMX_PARAM_PORTDEFINITIONTYPE* aPortParam, OMX_BOOL *aResizeFlag);
++
++    /* ...release output buffer back to pool */
++    void                    DSPRelease (OMX_BUFFERHEADERTYPE *b);
++    
++    /* ...flush audio decoder */
++    void                    DSPFlush (void);
++};
++
++/*******************************************************************************
++ * Entry points
++ ******************************************************************************/
++
++/* ...register DLL */
++extern "C" OSCL_EXPORT_REF OsclAny* PVGetInterface (void);
++
++/* ...unregister DLL */
++extern "C" OSCL_EXPORT_REF void     PVReleaseInterface (OsclSharedLibraryInterface *aInstance);
++
++
++#endif
++
+diff -pruN a/omx_ti/audio/omx_dsp_audio_omap3530.cfg b/omx_ti/audio/omx_dsp_audio_omap3530.cfg
+--- a/omx_ti/audio/omx_dsp_audio_omap3530.cfg	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx_dsp_audio_omap3530.cfg	2010-09-24 21:11:53.000000000 +0400
+@@ -0,0 +1,47 @@
++/*
++ * Copyright (C) $year Texas Instruments Incorporated - http://www.ti.com/
++ *
++ * This program is free software; you can redistribute it and/or modify 
++ * it under the terms of the GNU Lesser General Public License as
++ * published by the Free Software Foundation version 2.1 of the License.
++ *
++ * This program is distributed #as is# WITHOUT ANY WARRANTY of any kind,
++ * whether express or implied; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++ * Lesser General Public License for more details.
++ *
++ */
++
++/* Load the Codec Engine 'Operating System Abstraction Layer' */
++var osalGlobal = xdc.useModule('ti.sdo.ce.osal.Global');
++
++var os = xdc.useModule('ti.sdo.ce.osal.linux.Settings');
++osalGlobal.os = os;
++
++/* Configure CE to use it's DSP Link Linux version */
++var ipc = xdc.useModule('ti.sdo.ce.ipc.Settings');
++ipc.commType = ipc.COMM_DSPLINK;
++
++/*
++ *  ======== Engine Configuration ========
++ */
++var Engine = xdc.useModule('ti.sdo.ce.Engine');
++var demoEngine = Engine.createFromServer(
++    "codecServer",
++    "./bin/cs.x64P",
++    "ti.sdo.server.cs"
++    );
++
++/*
++ * var combopath = "" + java.lang.System.getenv("CODEC_SERVER");
++ * if (combopath != "" && combopath != "null") {
++ *	demoEngine.server = java.lang.System.getenv("CODEC_SERVER");
++ * }
++ */
++demoEngine.server = "/system/ti-dsp/cs.x64P";
++ 
++/* Load support for the DMAI module */
++var DMAI = xdc.loadPackage('ti.sdo.dmai');
++
++var SCPY = xdc.useModule('ti.sdo.fc.scpy.SCPY');
++var SDMA = xdc.useModule('ti.sdo.linuxutils.sdma.SDMA');
+diff -pruN a/omx_ti/audio/omx-dsp-mp3.cpp b/omx_ti/audio/omx-dsp-mp3.cpp
+--- a/omx_ti/audio/omx-dsp-mp3.cpp	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx-dsp-mp3.cpp	2010-09-27 17:56:47.153630194 +0400
+@@ -0,0 +1,325 @@
++/*******************************************************************************
++ * omx-dsp-mp3.cpp
++ *
++ * Definition of MP3 DSP-accelerated audio decoder. 
++ *
++ * Copyright (C) 2010 Alexander Smirnov <asmirnov.bluesman@gmail.com>
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ ******************************************************************************/
++
++#define MODULE_TAG                      MP3
++
++/*******************************************************************************
++ * Includes
++ ******************************************************************************/
++
++#include "omx-dsp.h"
++#include "omx-dsp-mp3.h"
++
++/*******************************************************************************
++ * Debugging configuration
++ ******************************************************************************/
++
++/* ...tracing configuration */
++TRACE_TAG (INIT,    1);
++TRACE_TAG (DATA,    1);
++TRACE_TAG (PROCESS, 1);
++TRACE_TAG (DEBUG,   1);
++TRACE_TAG (ERROR,   1);
++TRACE_TAG (INFO,    1);
++
++/*******************************************************************************
++ * Local constants definitions
++ ******************************************************************************/
++
++static const OMX_STRING     mp3_decoder_name = (OMX_STRING) "mp3dec";
++
++/*******************************************************************************
++ * Plugin system infrastructure
++ ******************************************************************************/
++
++/*******************************************************************************
++ * Mp3OmxDspComponentFactory
++ *
++ * This function is called by OMX_GetHandle and it creates an instance of the 
++ * mp3 component AO
++ ******************************************************************************/
++
++OMX_ERRORTYPE Mp3OmxDspComponentFactory (OMX_OUT OMX_HANDLETYPE* pHandle, OMX_IN  OMX_PTR pAppData, OMX_IN OMX_PTR pProxy , OMX_STRING aOmxLibName, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount)
++{
++    OmxDspMp3Decoder   *d;
++    OMX_ERRORTYPE       Status;
++
++    OSCL_UNUSED_ARG(aOmxLibName);
++    OSCL_UNUSED_ARG(aOmxLib);
++    OSCL_UNUSED_ARG(aOsclUuid);
++    OSCL_UNUSED_ARG(aRefCount);
++
++    /***************************************************************************
++     * Create decoder component object
++     **************************************************************************/
++
++    if ((d = (OmxDspMp3Decoder*)OSCL_NEW(OmxDspMp3Decoder, ())) == NULL)
++    {
++        return TRACE (ERROR, _X("Failed to allocate resources")), OMX_ErrorInsufficientResources;
++    }
++
++    /***************************************************************************
++     * Call the construct component to initialize OMX types
++     **************************************************************************/
++
++    /* ...construct component */
++    Status = d->ConstructComponent (pAppData, pProxy, mp3_decoder_name);
++
++    /* ...and return the handle and status */
++    return *pHandle = d->GetOmxHandle(), TRACE (DEBUG, _b("Component[%p] created: %d"), (void*)(*pHandle), Status), Status;
++}
++
++/*******************************************************************************
++ * Mp3OmxDspComponentDestructor
++ *
++ * This function is called by OMX_FreeHandle when component AO needs to be 
++ * destroyed
++ ******************************************************************************/
++
++OMX_ERRORTYPE Mp3OmxDspComponentDestructor (OMX_IN OMX_HANDLETYPE pHandle, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount)
++{
++    OmxDspMp3Decoder   *d = (OmxDspMp3Decoder*)((OMX_COMPONENTTYPE*)pHandle)->pComponentPrivate;
++    
++    OSCL_UNUSED_ARG(aOmxLib);
++    OSCL_UNUSED_ARG(aOsclUuid);
++    OSCL_UNUSED_ARG(aRefCount);
++
++    /* ...clean up decoder, OMX component stuff */
++    d->DestroyComponent();
++
++    /* ...destroy the AO class */
++    OSCL_DELETE(d);
++
++    /* ...and return success result */
++    return TRACE (DEBUG, _b("Component[%p] destroyed"), (void*)pHandle), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * Class implementation
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspMp3Decoder::OmxDspMp3Decoder
++ *
++ * Component object constructor
++ ******************************************************************************/
++
++OmxDspMp3Decoder::OmxDspMp3Decoder()
++{
++    TRACE (DEBUG, _b("Component[%p] constructed"), this);
++    
++    /* ...add component to scheduler */
++    (!IsAdded() ? AddToScheduler(), 1 : 0);
++}
++
++/*******************************************************************************
++ * OmxDspMp3Decoder::~OmxDspMp3Decoder
++ *
++ * Component object destructor
++ ******************************************************************************/
++
++OmxDspMp3Decoder::~OmxDspMp3Decoder()
++{
++    /* ...remove from scheduler as required */
++    (IsAdded() ? RemoveFromScheduler(), 1 : 0);
++
++    TRACE (DEBUG, _b("Component[%p] destructed"), this);
++}
++
++/*******************************************************************************
++ * Component interface implementation
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspMp3Decoder::ConstructComponent
++ *
++ * Construct component
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspMp3Decoder::ConstructComponent (OMX_PTR pAppData, OMX_PTR pProxy, OMX_STRING cDecoderName)
++{
++    ComponentPortType  *pInPort, *pOutPort;
++    OMX_ERRORTYPE       Status;
++
++    /***************************************************************************
++     * Call base class construction function first
++     **************************************************************************/
++
++    if ((Status = OmxDspAudioDecoder::ConstructComponent (pAppData, pProxy, cDecoderName)) != OMX_ErrorNone)
++    {
++        /* ...base component creation failed; resign */
++        return Status;
++    }
++
++    /***************************************************************************
++     * Initialize ports
++     **************************************************************************/
++
++    pInPort = ipPorts[OMX_PORT_INPUTPORT_INDEX], pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++
++    /***************************************************************************
++     * Input port configuration - encoded MP3 audio stream
++     **************************************************************************/
++
++    /* ...input audio format */
++    pInPort->PortParam.format.audio.eEncoding = OMX_AUDIO_CodingMP3;
++
++    /* ...input/output ports dimentions */
++    pInPort->PortParam.nBufferCountActual = OMX_DSP_MP3_INPUT_BUFFER_NUMBER;
++    pInPort->PortParam.nBufferSize = OMX_DSP_MP3_INPUT_BUFFER_SIZE;
++    pOutPort->PortParam.nBufferCountActual = OMX_DSP_MP3_OUTPUT_BUFFER_NUMBER;
++    pOutPort->PortParam.nBufferSize = OMX_DSP_MP3_OUTPUT_BUFFER_SIZE;
++
++    /* ...default values for MP3 audio param port */
++    pInPort->AudioMp3Param.nPortIndex = OMX_PORT_INPUTPORT_INDEX;
++    pInPort->AudioMp3Param.nChannels = 2;
++    pInPort->AudioMp3Param.nBitRate = 0;
++    pInPort->AudioMp3Param.nSampleRate = 44100;
++    pInPort->AudioMp3Param.nAudioBandWidth = 0;
++    pInPort->AudioMp3Param.eChannelMode = OMX_AUDIO_ChannelModeStereo;
++    pInPort->AudioMp3Param.eFormat = OMX_AUDIO_MP3StreamFormatMP1Layer3;
++
++    pInPort->AudioEqualizerType.nPortIndex = OMX_PORT_INPUTPORT_INDEX;
++    pInPort->AudioEqualizerType.sBandIndex.nMin = 0;
++    pInPort->AudioEqualizerType.sBandIndex.nValue = 0; //(e_equalization) flat;
++    pInPort->AudioEqualizerType.sBandIndex.nMax = 7; //(e_equalization) flat_;
++
++    pInPort->AudioParam.eEncoding = OMX_AUDIO_CodingMP3;
++
++    oscl_strncpy((OMX_STRING)iComponentRole, (OMX_STRING)"audio_decoder.mp3", OMX_MAX_STRINGNAME_SIZE);
++
++    /***************************************************************************
++     * Initialization completed successfully
++     **************************************************************************/
++
++    return TRACE (INIT, _b("MP3 decoder component constructed")), OMX_ErrorNone;
++}
++
++/*******************************************************************************
++ * OmxDspMp3Decoder::DestroyComponent
++ *
++ * This function is called by the omx core when the component is disposed by 
++ * the IL client with a call to FreeHandle().
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspMp3Decoder::DestroyComponent (void)
++{
++    OMX_ERRORTYPE   Status;
++    
++    /***************************************************************************
++     * Pass control to base version (no specific actions)
++     **************************************************************************/
++
++    return Status = OmxDspAudioDecoder::DestroyComponent(), TRACE (INIT, _b("MP3 decoder component destructed")), Status;
++}
++/*******************************************************************************
++ * DSP engine support
++ ******************************************************************************/
++
++/*******************************************************************************
++ * OmxDspMP3Decoder::DSPDecoderInit
++ *
++ * Initialize DSP decoder 
++ ******************************************************************************/
++
++OMX_ERRORTYPE OmxDspMp3Decoder::DSPDecoderInit (void)
++{
++    OMX_ERRORTYPE   Status;
++
++    /***************************************************************************
++     * Initialize base audio decoder
++     **************************************************************************/
++
++    if ((Status = OmxDspAudioDecoder::DSPDecoderInit()) != OMX_ErrorNone)
++    {
++        return Status;
++    }
++
++    iDSPWriteIndex = 0;
++    iDSPBufferOffset = 0;
++
++    /***************************************************************************
++     * Decoder engine successfully created
++     **************************************************************************/
++
++    return TRACE (INIT, _b("MP3 audio decoder initialized")), OMX_ErrorNone;
++}
++    
++/*******************************************************************************
++ * OmxDspMp3Decoder::DSPPut
++ *
++ * Copy data from input buffer to DSP buffer
++ ******************************************************************************/
++
++OMX_BOOL OmxDspMp3Decoder::DSPPut (OMX_BUFFERHEADERTYPE* b)
++{
++    OMX_U32     n = b->nFilledLen;
++    OMX_U32     e;
++
++    TRACE (DATA, _b("copy %u bytes: [%lu, %lu)"), (unsigned)n, iDSPWriteIndex, iDSPWriteIndex + n);
++    
++    /* ...check out there is enough room to store data (TBD) */
++    if ((e = iDSPWriteIndex + n) > iDSPBufferSize) return TRACE (DATA, _b("Input buffer to large")), OMX_FALSE;
++    
++    /* ...copy input buffer content into DSP-owned buffer */
++    oscl_memcpy (pDSPBuffer + iDSPWriteIndex, b->pBuffer + b->nOffset, n);
++    
++    /* ...set input buffer length and reset writing pointer for a final chunk */
++    (iEndOfFrameFlag == OMX_TRUE ? TRACE (DATA, _b("Received frame: %lu bytes"), e), Buffer_setNumBytesUsed (hDSPBuffer, e), e = 0 : 0);
++
++    /* ...advance writing index and return success result */
++    return iDSPWriteIndex += n, OMX_TRUE;
++}
++
++int OmxDspMp3Decoder::DSPResize (Buffer_Handle hBuf)
++{
++    ComponentPortType  *pInPort, *pOutPort;
++    Int                 SampleRate;
++    OMX_U32             OutputLength;
++
++    pInPort = ipPorts[OMX_PORT_INPUTPORT_INDEX], pOutPort = ipPorts[OMX_PORT_OUTPUTPORT_INDEX];
++
++    /***************************************************************************
++    * Setting rate for output port. Call once after first frame received.
++    **************************************************************************/
++
++    SampleRate = Adec1_getSampleRate(hAd);
++
++    pInPort->AudioMp3Param.nSampleRate = SampleRate;
++    pInPort->AudioMp3Param.nChannels = 2;
++    pOutPort->AudioPcmMode.nSamplingRate = SampleRate;
++    pOutPort->AudioPcmMode.nChannels = 2;
++
++    iFrameCount++;
++    iResizePending = OMX_TRUE;
++
++    /* ...send port settings changed event */
++    OMX_COMPONENTTYPE* pHandle = (OMX_COMPONENTTYPE*) ipAppPriv->CompHandle;
++    (*(ipCallbacks->EventHandler))
++      (pHandle,
++       iCallbackData,
++       OMX_EventPortSettingsChanged,
++       OMX_PORT_OUTPUTPORT_INDEX,
++       0,
++       NULL);
++
++    return 0;
++}
++
+diff -pruN a/omx_ti/audio/omx-dsp-mp3.h b/omx_ti/audio/omx-dsp-mp3.h
+--- a/omx_ti/audio/omx-dsp-mp3.h	1970-01-01 03:00:00.000000000 +0300
++++ b/omx_ti/audio/omx-dsp-mp3.h	2010-09-27 17:59:17.355630794 +0400
+@@ -0,0 +1,94 @@
++/*******************************************************************************
++ * omx-dsp-mp3.h
++ *
++ * Definition of MP3 DSP-accelerated audio decoder. 
++ *
++ * Copyright (C) 2010 Alexander Smirnov <asmirnov.bluesman@gmail.com>
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ ******************************************************************************/
++
++#ifndef __OMX_DSP_MP3_H
++#define __OMX_DSP_MP3_H
++
++/*******************************************************************************
++ * Includes
++ ******************************************************************************/
++
++/* ...DMAI Buffer_Object definition */
++#include <ti/sdo/dmai/priv/_Buffer.h>
++
++/* ...base audio decoder */
++#include "omx-dsp-audio.h"
++
++#define OMX_DSP_MP3_INPUT_BUFFER_NUMBER 10
++#define OMX_DSP_MP3_INPUT_BUFFER_SIZE 8192
++#define OMX_DSP_MP3_OUTPUT_BUFFER_NUMBER 9
++#define OMX_DSP_MP3_OUTPUT_BUFFER_SIZE 4608
++
++/* ...must be the same as in MP3 OpenCORE node */
++#define PVMP3FF_DEFAULT_MAX_FRAMESIZE       4096
++
++/*******************************************************************************
++ * Component definition
++ ******************************************************************************/
++
++class OmxDspMp3Decoder : public OmxDspAudioDecoder
++{
++public:
++
++    /***************************************************************************
++     * Constructor / destructor
++     **************************************************************************/
++
++    OmxDspMp3Decoder ();
++    ~OmxDspMp3Decoder ();
++
++    /***************************************************************************
++     * Framework API
++     **************************************************************************/
++
++    /* ...component factory */
++    OMX_ERRORTYPE           ConstructComponent (OMX_PTR pAppData, OMX_PTR pProxy, OMX_STRING cDecoderName);
++
++    /* ...component destructor */
++    OMX_ERRORTYPE           DestroyComponent (void);
++
++private:
++
++    /***************************************************************************
++     * Overloaded functions
++     **************************************************************************/
++
++    /* ...decoder initialization */
++    OMX_ERRORTYPE           DSPDecoderInit (void);
++
++    /* ...input data processing function */
++    OMX_BOOL                DSPPut (OMX_BUFFERHEADERTYPE *b);
++
++    /* ...resize buffer table */
++    int                     DSPResize (Buffer_Handle hBuf);
++};
++
++/*******************************************************************************
++ * Entry points
++ ******************************************************************************/
++
++/* ...component factory */
++extern OMX_ERRORTYPE Mp3OmxDspComponentFactory (OMX_OUT OMX_HANDLETYPE* pHandle, OMX_IN  OMX_PTR pAppData, OMX_IN OMX_PTR pProxy , OMX_STRING aOmxLibName, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount);
++
++/* ...component destructor */
++extern OMX_ERRORTYPE Mp3OmxDspComponentDestructor (OMX_IN OMX_HANDLETYPE pHandle, OMX_PTR &aOmxLib, OMX_PTR aOsclUuid, OMX_U32 &aRefCount);
++
++#endif
++

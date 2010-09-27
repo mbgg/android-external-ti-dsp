@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/config.h b/gstreamer_ti/ti_build/ticodecplugin/config.h
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/config.h b/gstreamer_ti/ti_build/ticodecplugin/config.h
 --- a/gstreamer_ti/ti_build/ticodecplugin/config.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/config.h	2009-11-10 21:16:31.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/config.h	2010-07-06 19:07:56.090764177 +0400
 @@ -0,0 +1,62 @@
 +/* config.h.  Generated from config.h.in by configure.  */
 +/* config.h.in.  Generated from configure.ac by autoheader.  */
@@ -78,27 +78,27 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/config.h b/gstreamer_ti/ti_buil
 +
 +/* Version number of package */
 +#define VERSION "0.10.0.1"
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld b/gstreamer_ti/ti_build/ticodecplugin/src/config.bld
---- a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/config.bld	2009-11-10 21:16:27.000000000 +0300
-@@ -13,12 +13,28 @@ var C64P = xdc.useModule('ti.targets.C64
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld b/gstreamer_ti/ti_build/ticodecplugin/src/config.bld
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld	2010-07-06 18:48:20.844762898 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/config.bld	2010-07-06 19:07:56.091757210 +0400
+@@ -13,12 +13,28 @@
  C64P.rootDir = "/opt/dmsw/cg6x_6_0_16/";
  C64P.platform = "ti.platforms.evmDM6446"; 
  
-+var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
-+GCArmv5T.rootDir = "" + java.lang.System.getenv("MVTOOL_DIR");
-+GCArmv5T.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
++var GCArmv7A = xdc.useModule('gnu.targets.arm.GCArmv7A');
++GCArmv7A.rootDir = "" + java.lang.System.getenv("MVTOOL_DIR");
++GCArmv7A.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
 +
-+GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
++GCArmv7A.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
 +
-+GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
-+GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++GCArmv7A.lnkOpts.suffix = GCArmv7A.lnkOpts.suffix.replace("-lstdc++","");
++GCArmv7A.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
 +
-+GCArmv5T.platforms = [
++GCArmv7A.platforms = [
 +    "ti.platforms.evm3530"
 +];
 +
-+Build.targets.$add(GCArmv5T);
++Build.targets.$add(GCArmv7A);
 +
  /*
   *  ======== Build.targets ========
@@ -111,10 +111,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/config.bld b/gstreamer_ti/t
 -
 +*/
  
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c	2009-11-10 23:05:18.000000000 +0300
-@@ -858,12 +858,14 @@ static gboolean gst_tiauddec1_init_audio
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c	2010-07-06 18:48:20.778772729 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c	2010-07-06 19:07:56.091757210 +0400
+@@ -858,12 +858,14 @@
          return FALSE;
      }
  
@@ -129,10 +129,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec1.c b/gstreamer_
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c	2009-11-10 23:06:10.000000000 +0300
-@@ -854,12 +854,14 @@ static gboolean gst_tiauddec_init_audio(
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c	2010-07-06 18:48:20.802759845 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c	2010-07-06 19:07:56.091757210 +0400
+@@ -854,12 +854,14 @@
          return FALSE;
      }
  
@@ -147,10 +147,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiauddec.c b/gstreamer_t
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c	2009-11-10 23:07:01.000000000 +0300
-@@ -786,12 +786,14 @@ static gboolean gst_tiaudenc1_init_audio
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c	2010-07-06 18:48:21.111719104 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c	2010-07-06 19:07:56.092760116 +0400
+@@ -786,12 +786,14 @@
          return FALSE;
      }
  
@@ -165,10 +165,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiaudenc1.c b/gstreamer_
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg b/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg	2009-11-10 21:16:19.000000000 +0300
-@@ -32,11 +32,14 @@ var demoEngine = Engine.createFromServer
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg b/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg	2010-07-06 18:48:20.754758252 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.cfg	2010-07-06 19:07:56.092760116 +0400
+@@ -32,11 +32,14 @@
      "ti.sdo.server.cs"
      );
  
@@ -188,10 +188,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gstticodecplugin_omap3530.c
  /* Load support for the DMAI module */
  var DMAI = xdc.loadPackage('ti.sdo.dmai');
  
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c	2009-11-10 23:07:48.000000000 +0300
-@@ -1008,12 +1008,14 @@ static gboolean gst_tiimgdec1_init_image
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c	2010-07-06 18:48:20.753814359 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c	2010-07-06 19:07:56.093761193 +0400
+@@ -1008,12 +1008,14 @@
          return FALSE;
      }
  
@@ -206,10 +206,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec1.c b/gstreamer_
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c	2009-11-10 23:08:24.000000000 +0300
-@@ -1009,12 +1009,14 @@ static gboolean gst_tiimgdec_init_image(
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c	2010-07-06 18:48:21.175745806 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c	2010-07-06 19:07:56.093761193 +0400
+@@ -1009,12 +1009,14 @@
          return FALSE;
      }
  
@@ -224,10 +224,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgdec.c b/gstreamer_t
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c	2009-11-10 23:09:13.000000000 +0300
-@@ -1315,12 +1315,14 @@ static gboolean gst_tiimgenc1_init_image
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c	2010-07-06 18:48:20.811739265 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c	2010-07-06 19:07:56.094756626 +0400
+@@ -1315,12 +1315,14 @@
          return FALSE;
      }
  
@@ -242,10 +242,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc1.c b/gstreamer_
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c	2009-11-10 23:09:41.000000000 +0300
-@@ -1313,12 +1313,14 @@ static gboolean gst_tiimgenc_init_image(
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c	2010-07-06 18:48:21.149747428 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c	2010-07-06 19:07:56.094756626 +0400
+@@ -1313,12 +1313,14 @@
          return FALSE;
      }
  
@@ -260,10 +260,22 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttiimgenc.c b/gstreamer_t
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c	2009-11-10 23:10:16.000000000 +0300
-@@ -906,12 +906,14 @@ static gboolean gst_tividdec2_init_video
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h b/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h	2010-07-06 18:48:20.826756362 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttithreadprops.h	2010-07-06 19:08:00.471009249 +0400
+@@ -41,7 +41,7 @@
+ 
+ /* Thread status utility macros. */
+ #define gst_tithread_lock_status(x) \
+-            pthread_mutex_lock(&(x)->threadStatusMutex)
++            pthread_mutex_trylock(&(x)->threadStatusMutex)
+ #define gst_tithread_unlock_status(x) \
+             pthread_mutex_unlock(&(x)->threadStatusMutex)
+         
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c	2010-07-06 18:48:20.842745580 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c	2010-07-06 19:07:56.095758023 +0400
+@@ -906,12 +906,14 @@
          return FALSE;
      }
  
@@ -278,10 +290,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec2.c b/gstreamer_
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c	2009-11-10 23:10:45.000000000 +0300
-@@ -884,12 +884,14 @@ static gboolean gst_tividdec_init_video(
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c	2010-07-06 18:48:21.128754761 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c	2010-07-06 19:07:56.095758023 +0400
+@@ -884,12 +884,14 @@
          return FALSE;
      }
  
@@ -296,10 +308,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividdec.c b/gstreamer_t
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c	2009-11-10 23:11:30.000000000 +0300
-@@ -1200,12 +1200,14 @@ static gboolean gst_tividenc1_init_video
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c	2010-07-06 18:48:20.833767092 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c	2010-07-06 19:07:56.096760368 +0400
+@@ -1200,12 +1200,14 @@
          return FALSE;
      }
  
@@ -314,10 +326,10 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc1.c b/gstreamer_
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c
---- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c	2009-11-10 21:07:20.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c	2009-11-10 23:11:59.000000000 +0300
-@@ -976,12 +976,14 @@ static gboolean gst_tividenc_init_video(
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c
+--- a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c	2010-07-06 18:48:21.118760193 +0400
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c	2010-07-06 19:07:56.096760368 +0400
+@@ -976,12 +976,14 @@
          return FALSE;
      }
  
@@ -332,9 +344,9 @@ diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/gsttividenc.c b/gstreamer_t
  
      /* Set the thread to be fifo real time scheduled */
      if (pthread_attr_setschedpolicy(&attr, SCHED_FIFO)) {
-diff -pruN a/gstreamer_ti/ti_build/ticodecplugin/src/Makefile b/gstreamer_ti/ti_build/ticodecplugin/src/Makefile
+diff -ruN a/gstreamer_ti/ti_build/ticodecplugin/src/Makefile b/gstreamer_ti/ti_build/ticodecplugin/src/Makefile
 --- a/gstreamer_ti/ti_build/ticodecplugin/src/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/gstreamer_ti/ti_build/ticodecplugin/src/Makefile	2009-11-10 21:16:32.000000000 +0300
++++ b/gstreamer_ti/ti_build/ticodecplugin/src/Makefile	2010-07-06 19:07:56.096760368 +0400
 @@ -0,0 +1,64 @@
 +XDC_CONFIG_BASENAME = gstticodecplugin_$(PLATFORM)
 +CONFIGURO     = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
