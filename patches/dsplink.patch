@@ -1,4 +1,4 @@
-# Copyright (C) 2009 Andrei Dolnikov <dolnikov.andrei@gmail.com>
+# Copyright (C) 2010 Yegor Yelizarov <yegor.yelizarov@gmail.com>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-diff -pruN a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/api/Linux/_notify.c b/dsplink_1_61_03/packages/dsplink/gpp/src/api/Linux/_notify.c
---- a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/api/Linux/_notify.c	2009-04-17 05:20:55.000000000 +0400
-+++ b/dsplink_1_61_03/packages/dsplink/gpp/src/api/Linux/_notify.c	2009-11-09 16:39:14.000000000 +0300
-@@ -327,10 +327,12 @@ NOTIFY_eventWorker (IN OPT void * arg)
+
+diff -ruN a/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/api/Linux/_notify.c b/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/api/Linux/_notify.c
+--- a/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/api/Linux/_notify.c	2010-05-28 18:33:47.000000000 +0400
++++ b/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/api/Linux/_notify.c	2010-07-06 18:59:20.538862542 +0400
+@@ -320,10 +320,12 @@
          pthread_exit (NULL) ;
      }
  
@@ -28,19 +29,20 @@ diff -pruN a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/api/Linux/_notify.c b
  
      drvHandle = open (LINK_DRIVER, O_RDWR | O_SYNC) ;
      if (drvHandle < 0) {
-diff -pruN a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/Makefile_kbuild b/dsplink_1_61_03/packages/dsplink/gpp/src/Makefile_kbuild
---- a/dsplink_1_61_03.orig/packages/dsplink/gpp/src/Makefile_kbuild	2009-04-17 05:21:01.000000000 +0400
-+++ b/dsplink_1_61_03/packages/dsplink/gpp/src/Makefile_kbuild	2009-11-09 16:38:40.000000000 +0300
-@@ -120,12 +120,14 @@ debug:
- 	$(shell echo $(addprefix -D, $(TI_DSPLINK_GPP_DEFINES)) > PMGR_defines.txt)
- 	$(MAKE) PROFILE=DEBUG -C $(KERNEL_DIR) SUBDIRS=$(PWD) $(MAKE_OPTS) modules
+diff -ruN a/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/Makefile_kbuild b/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/Makefile_kbuild
+--- a/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/Makefile_kbuild	2010-05-28 18:33:48.000000000 +0400
++++ b/dsplink_linux_1_65_00_02/packages/dsplink/gpp/src/Makefile_kbuild	2010-07-06 18:59:20.538862542 +0400
+@@ -119,6 +119,7 @@
+ 	echo Kernel side build complete
+ 	echo Copying dsplinkk.ko to $(TI_DSPLINK_GPPROOT)$(DIRSEP)export$(DIRSEP)BIN$(DIRSEP)$(TI_DSPLINK_GPPOSPREFIX)Linux$(DIRSEP)$(TI_DSPLINK_PLATFORM)$(DIRSEP)DEBUG
  	mv dsplinkk.ko Module.symvers PMGR_includes.txt PMGR_defines.txt  $(TI_DSPLINK_GPPROOT)$(DIRSEP)export$(DIRSEP)BIN$(DIRSEP)$(TI_DSPLINK_GPPOSPREFIX)Linux$(DIRSEP)$(TI_DSPLINK_PLATFORM)$(DIRSEP)DEBUG
 +	$(MAKE) PROFILE=DEBUG -C api
  
  release:
  	$(shell echo $(addprefix -I, $(TI_DSPLINK_GPP_INC_PATH)) > PMGR_includes.txt)
- 	$(shell echo $(addprefix -D, $(TI_DSPLINK_GPP_DEFINES)) > PMGR_defines.txt)
- 	$(MAKE) PROFILE=RELEASE -C $(KERNEL_DIR) SUBDIRS=$(PWD) $(MAKE_OPTS) modules
+@@ -128,6 +129,7 @@
+ 	echo Kernel side build complete
+ 	echo Copying dsplinkk.ko to $(TI_DSPLINK_GPPROOT)$(DIRSEP)export$(DIRSEP)BIN$(DIRSEP)$(TI_DSPLINK_GPPOSPREFIX)Linux$(DIRSEP)$(TI_DSPLINK_PLATFORM)$(DIRSEP)RELEASE
  	mv dsplinkk.ko Module.symvers PMGR_includes.txt PMGR_defines.txt  $(TI_DSPLINK_GPPROOT)$(DIRSEP)export$(DIRSEP)BIN$(DIRSEP)$(TI_DSPLINK_GPPOSPREFIX)Linux$(DIRSEP)$(TI_DSPLINK_PLATFORM)$(DIRSEP)RELEASE
 +	$(MAKE) PROFILE=RELEASE -C api
  

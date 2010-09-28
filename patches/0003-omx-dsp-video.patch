@@ -1,6 +1,6 @@
 diff -pruN a/omx_ti/video/config.bld b/omx_ti/video/config.bld
 --- a/omx_ti/video/config.bld	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/config.bld	2010-09-17 14:34:02.000000000 +0400
++++ b/omx_ti/video/config.bld	2010-09-28 13:25:23.000000000 +0400
 @@ -0,0 +1,40 @@
 +/*
 + *  ======== config.bld ========
@@ -44,8 +44,8 @@ diff -pruN a/omx_ti/video/config.bld b/omx_ti/video/config.bld
 +
 diff -pruN a/omx_ti/video/Makefile b/omx_ti/video/Makefile
 --- a/omx_ti/video/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/Makefile	2010-09-17 15:15:49.000000000 +0400
-@@ -0,0 +1,26 @@
++++ b/omx_ti/video/Makefile	2010-09-28 15:15:16.000000000 +0400
+@@ -0,0 +1,23 @@
 +XDC_CONFIG_BASENAME = omx_dsp_video_$(PLATFORM)
 +CONFIGURO     = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
 +BUILT_SOURCES = $(XDC_CONFIG_BASENAME)/compiler.opt $(XDC_CONFIG_BASENAME)/linker.cmd
@@ -61,10 +61,7 @@ diff -pruN a/omx_ti/video/Makefile b/omx_ti/video/Makefile
 +
 +COMPILER_OPT = $(shell cat $(XDC_CONFIG_BASENAME)/compiler.opt) -I../include
 +
-+all:
-+	echo SKIP
-+
-+all1: xdc_config
++all: xdc_config
 +	$(CXX) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o omx-dsp-video.o omx-dsp-video.cpp
 +	$(CXX) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o omx-dsp-mpeg4.o omx-dsp-mpeg4.cpp
 +	$(CXX) -DHAVE_CONFIG_H $(CFLAGS) $(COMPILER_OPT) -c -o omx-dsp-h264.o omx-dsp-h264.cpp
@@ -74,7 +71,7 @@ diff -pruN a/omx_ti/video/Makefile b/omx_ti/video/Makefile
 +	rm -rf *.o *.so omx_dsp_video_$(PLATFORM)
 diff -pruN a/omx_ti/video/omx-dsp-h264.cpp b/omx_ti/video/omx-dsp-h264.cpp
 --- a/omx_ti/video/omx-dsp-h264.cpp	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx-dsp-h264.cpp	2010-09-17 14:34:02.000000000 +0400
++++ b/omx_ti/video/omx-dsp-h264.cpp	2010-09-28 16:39:25.000000000 +0400
 @@ -0,0 +1,294 @@
 +/*******************************************************************************
 + * omx-dsp-h264.cpp
@@ -111,11 +108,11 @@ diff -pruN a/omx_ti/video/omx-dsp-h264.cpp b/omx_ti/video/omx-dsp-h264.cpp
 +
 +/* ...tracing configuration */
 +TRACE_TAG (INIT,    1);
-+TRACE_TAG (DATA,    0);
-+TRACE_TAG (PROCESS, 0);
-+TRACE_TAG (DEBUG,   0);
++TRACE_TAG (DATA,    1);
++TRACE_TAG (PROCESS, 1);
++TRACE_TAG (DEBUG,   1);
 +TRACE_TAG (ERROR,   1);
-+TRACE_TAG (INFO,    0);
++TRACE_TAG (INFO,    1);
 +
 +/*******************************************************************************
 + * Local constants definitions
@@ -372,7 +369,7 @@ diff -pruN a/omx_ti/video/omx-dsp-h264.cpp b/omx_ti/video/omx-dsp-h264.cpp
 +}
 diff -pruN a/omx_ti/video/omx-dsp-h264.h b/omx_ti/video/omx-dsp-h264.h
 --- a/omx_ti/video/omx-dsp-h264.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx-dsp-h264.h	2010-09-17 14:34:02.000000000 +0400
++++ b/omx_ti/video/omx-dsp-h264.h	2010-09-28 13:25:23.000000000 +0400
 @@ -0,0 +1,79 @@
 +/*******************************************************************************
 + * omx-dsp-h264.h
@@ -455,8 +452,8 @@ diff -pruN a/omx_ti/video/omx-dsp-h264.h b/omx_ti/video/omx-dsp-h264.h
 +#endif  /* __OMX_DSP_H264_H */
 diff -pruN a/omx_ti/video/omx-dsp-mpeg4.cpp b/omx_ti/video/omx-dsp-mpeg4.cpp
 --- a/omx_ti/video/omx-dsp-mpeg4.cpp	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx-dsp-mpeg4.cpp	2010-09-17 14:34:03.000000000 +0400
-@@ -0,0 +1,342 @@
++++ b/omx_ti/video/omx-dsp-mpeg4.cpp	2010-09-28 15:36:48.000000000 +0400
+@@ -0,0 +1,346 @@
 +/*******************************************************************************
 + * omx-dsp-mpeg4.cpp
 + *
@@ -701,9 +698,11 @@ diff -pruN a/omx_ti/video/omx-dsp-mpeg4.cpp b/omx_ti/video/omx-dsp-mpeg4.cpp
 +    /* ...use NAL mode of framework (default setting) */
 +    iPVCapabilityFlags.iOMXComponentUsesFullAVCFrames = OMX_FALSE;
 +
++#if 0 /* OpenCORE 2.0.7 */
 +    /* ...to-be-understood (presumably, this stuff is unused) */
 +    iPVCapabilityFlags.iOMXComponentUsesInterleaved2BNALSizes = OMX_FALSE;
 +    iPVCapabilityFlags.iOMXComponentUsesInterleaved4BNALSizes = OMX_FALSE;
++#endif
 +
 +    /***************************************************************************
 +     * Initialize ports
@@ -769,11 +768,13 @@ diff -pruN a/omx_ti/video/omx-dsp-mpeg4.cpp b/omx_ti/video/omx-dsp-mpeg4.cpp
 +     * Common configuration of output port
 +     **************************************************************************/
 +
++#if 0 /* OpenCORE 2.0.7 */
 +    /* ...deblocking setting */
 +    SetHeader(&pOutPort->VideoDeBlocking, sizeof(OMX_PARAM_DEBLOCKINGTYPE));
 +    
 +    pOutPort->VideoDeBlocking.nPortIndex = OMX_PORT_OUTPUTPORT_INDEX;
 +    pOutPort->VideoDeBlocking.bDeblocking = OMX_FALSE;
++#endif
 +
 +    /***************************************************************************
 +     * Initialization completed successfully
@@ -801,7 +802,7 @@ diff -pruN a/omx_ti/video/omx-dsp-mpeg4.cpp b/omx_ti/video/omx-dsp-mpeg4.cpp
 +}
 diff -pruN a/omx_ti/video/omx-dsp-mpeg4.h b/omx_ti/video/omx-dsp-mpeg4.h
 --- a/omx_ti/video/omx-dsp-mpeg4.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx-dsp-mpeg4.h	2010-09-17 14:34:02.000000000 +0400
++++ b/omx_ti/video/omx-dsp-mpeg4.h	2010-09-28 13:25:23.000000000 +0400
 @@ -0,0 +1,81 @@
 +/*******************************************************************************
 + * omx-dsp-mpeg4.h
@@ -886,8 +887,8 @@ diff -pruN a/omx_ti/video/omx-dsp-mpeg4.h b/omx_ti/video/omx-dsp-mpeg4.h
 +#endif  /* __OMX_DSP_MPEG4_H */
 diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 --- a/omx_ti/video/omx-dsp-video.cpp	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx-dsp-video.cpp	2010-09-17 14:34:03.000000000 +0400
-@@ -0,0 +1,1605 @@
++++ b/omx_ti/video/omx-dsp-video.cpp	2010-09-28 15:30:35.000000000 +0400
+@@ -0,0 +1,1611 @@
 +/*******************************************************************************
 + * omx-dsp-video.cpp
 + *
@@ -1657,7 +1658,9 @@ diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 +
 +    if (PortIndex != OMX_PORT_OUTPUTPORT_INDEX)
 +    {
++#if 0 /* OpenCORE 2.0.7 */
 +        OmxComponentVideo::CalculateBufferParameters (PortIndex);
++#endif
 +    }
 +    else
 +    {
@@ -1745,6 +1748,7 @@ diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 +     * Process port direction (better comment is welcomed)
 +     **************************************************************************/
 +
++#if 0 /* OpenCORE 2.0.7 */
 +    if ((b->pOutputPortPrivate = oscl_malloc(sizeof(BufferCtrlStruct))) == NULL)
 +    {
 +        /* ...destroy buffer itself */
@@ -1760,6 +1764,7 @@ diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 +        /* ...initialize reference counter to 1 (since buffers are initially with the IL client) */
 +        pBCTRL->iRefCount = 1, pBCTRL->iIsBufferInComponentQueue = OMX_FALSE;
 +    }
++#endif
 +    
 +    /***************************************************************************
 +     * Mark the buffer is allocated
@@ -1835,6 +1840,7 @@ diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 +    {
 +        return TRACE (ERROR, _x("Failed to queue buffer %p"), pBuffer), OMX_ErrorInsufficientResources;
 +    }
++#if 0 /* OpenCORE 2.0.7 */
 +    else
 +    {
 +        BufferCtrlStruct *pBCTRL = (BufferCtrlStruct *)(pBuffer->pOutputPortPrivate);
@@ -1845,6 +1851,7 @@ diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 +        /* ...increase amount of available buffers (owned exclusively by AO) */
 +        (--pBCTRL->iRefCount == 0 ? d->iNumAvailableOutputBuffers++ : 0);
 +    }
++#endif
 +
 +    /***************************************************************************
 +     * Increment amount of available buffers and reschedule AO as appropriate
@@ -2495,7 +2502,7 @@ diff -pruN a/omx_ti/video/omx-dsp-video.cpp b/omx_ti/video/omx-dsp-video.cpp
 +}
 diff -pruN a/omx_ti/video/omx-dsp-video.h b/omx_ti/video/omx-dsp-video.h
 --- a/omx_ti/video/omx-dsp-video.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx-dsp-video.h	2010-09-17 14:34:02.000000000 +0400
++++ b/omx_ti/video/omx-dsp-video.h	2010-09-28 13:25:23.000000000 +0400
 @@ -0,0 +1,190 @@
 +/*******************************************************************************
 + * omx-dsp-video.h
@@ -2689,7 +2696,7 @@ diff -pruN a/omx_ti/video/omx-dsp-video.h b/omx_ti/video/omx-dsp-video.h
 +#endif  /* __OMX_DSP_VIDEO_H */
 diff -pruN a/omx_ti/video/omx_dsp_video_omap3530.cfg b/omx_ti/video/omx_dsp_video_omap3530.cfg
 --- a/omx_ti/video/omx_dsp_video_omap3530.cfg	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/video/omx_dsp_video_omap3530.cfg	2010-09-17 14:34:02.000000000 +0400
++++ b/omx_ti/video/omx_dsp_video_omap3530.cfg	2010-09-28 13:25:23.000000000 +0400
 @@ -0,0 +1,47 @@
 +/*
 + * Copyright (C) $year Texas Instruments Incorporated - http://www.ti.com/

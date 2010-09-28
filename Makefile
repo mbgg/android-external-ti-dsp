@@ -606,6 +606,6 @@ install:
 ifeq ($(strip $(BUILD_WITH_GST)), true)
 	cp $(GST_INSTALL_DIR)/ti_build/ticodecplugin/src/libgstticodecplugin.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/plugins/
 endif
-#	cp $(OMX_VIDEO_INSTALL_DIR)/libomx_dsp_video_sharedlibrary.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
+	cp $(OMX_VIDEO_INSTALL_DIR)/libomx_dsp_video_sharedlibrary.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
 	cp $(OMX_AUDIO_INSTALL_DIR)/libomx_dsp_audio_sharedlibrary.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
 	cp $(OMX_IFACE_INSTALL_DIR)/libdspengineiface.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
