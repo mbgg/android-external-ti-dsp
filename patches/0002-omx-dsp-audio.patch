@@ -1,6 +1,6 @@
 diff -pruN a/omx_ti/audio/config.bld b/omx_ti/audio/config.bld
 --- a/omx_ti/audio/config.bld	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/config.bld	2010-09-24 21:11:53.000000000 +0400
++++ b/omx_ti/audio/config.bld	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,40 @@
 +/*
 + *  ======== config.bld ========
@@ -44,7 +44,7 @@ diff -pruN a/omx_ti/audio/config.bld b/omx_ti/audio/config.bld
 +
 diff -pruN a/omx_ti/audio/Makefile b/omx_ti/audio/Makefile
 --- a/omx_ti/audio/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/Makefile	2010-09-24 21:11:53.000000000 +0400
++++ b/omx_ti/audio/Makefile	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,23 @@
 +XDC_CONFIG_BASENAME = omx_dsp_audio_$(PLATFORM)
 +CONFIGURO     = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
@@ -71,7 +71,7 @@ diff -pruN a/omx_ti/audio/Makefile b/omx_ti/audio/Makefile
 +	rm -rf *.o *.so omx_dsp_audio_$(PLATFORM)
 diff -pruN a/omx_ti/audio/omx-dsp-aac.cpp b/omx_ti/audio/omx-dsp-aac.cpp
 --- a/omx_ti/audio/omx-dsp-aac.cpp	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx-dsp-aac.cpp	2010-09-24 21:11:53.000000000 +0400
++++ b/omx_ti/audio/omx-dsp-aac.cpp	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,423 @@
 +/*******************************************************************************
 + * omx-dsp-aac.cpp
@@ -498,7 +498,7 @@ diff -pruN a/omx_ti/audio/omx-dsp-aac.cpp b/omx_ti/audio/omx-dsp-aac.cpp
 +
 diff -pruN a/omx_ti/audio/omx-dsp-aac.h b/omx_ti/audio/omx-dsp-aac.h
 --- a/omx_ti/audio/omx-dsp-aac.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx-dsp-aac.h	2010-09-24 21:11:53.000000000 +0400
++++ b/omx_ti/audio/omx-dsp-aac.h	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,95 @@
 +/*******************************************************************************
 + * omx-dsp-aac.h
@@ -597,8 +597,8 @@ diff -pruN a/omx_ti/audio/omx-dsp-aac.h b/omx_ti/audio/omx-dsp-aac.h
 +
 diff -pruN a/omx_ti/audio/omx-dsp-audio.cpp b/omx_ti/audio/omx-dsp-audio.cpp
 --- a/omx_ti/audio/omx-dsp-audio.cpp	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx-dsp-audio.cpp	2010-09-27 17:28:33.000000000 +0400
-@@ -0,0 +1,1513 @@
++++ b/omx_ti/audio/omx-dsp-audio.cpp	2010-11-08 23:52:09.301024619 +0300
+@@ -0,0 +1,1515 @@
 +/*******************************************************************************
 + * omx-dsp-audio.cpp
 + *
@@ -1566,8 +1566,10 @@ diff -pruN a/omx_ti/audio/omx-dsp-audio.cpp b/omx_ti/audio/omx-dsp-audio.cpp
 +     * Release the buffer
 +     **************************************************************************/
 +
++#if 0 /* OpenCORE 2.0.7 */
 +    /* ...deallocate control structure (it is an output port) */
 +    oscl_free (pBuffer->pOutputPortPrivate), pBuffer->pOutputPortPrivate = NULL;
++#endif
 +
 +    /* ...deallocate header itself */
 +    oscl_free (pBuffer);
@@ -2114,7 +2116,7 @@ diff -pruN a/omx_ti/audio/omx-dsp-audio.cpp b/omx_ti/audio/omx-dsp-audio.cpp
 +}
 diff -pruN a/omx_ti/audio/omx-dsp-audio.h b/omx_ti/audio/omx-dsp-audio.h
 --- a/omx_ti/audio/omx-dsp-audio.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx-dsp-audio.h	2010-09-24 21:11:53.000000000 +0400
++++ b/omx_ti/audio/omx-dsp-audio.h	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,196 @@
 +/*******************************************************************************
 + * omx-dsp-audio.h
@@ -2314,7 +2316,7 @@ diff -pruN a/omx_ti/audio/omx-dsp-audio.h b/omx_ti/audio/omx-dsp-audio.h
 +
 diff -pruN a/omx_ti/audio/omx_dsp_audio_omap3530.cfg b/omx_ti/audio/omx_dsp_audio_omap3530.cfg
 --- a/omx_ti/audio/omx_dsp_audio_omap3530.cfg	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx_dsp_audio_omap3530.cfg	2010-09-24 21:11:53.000000000 +0400
++++ b/omx_ti/audio/omx_dsp_audio_omap3530.cfg	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,47 @@
 +/*
 + * Copyright (C) $year Texas Instruments Incorporated - http://www.ti.com/
@@ -2365,7 +2367,7 @@ diff -pruN a/omx_ti/audio/omx_dsp_audio_omap3530.cfg b/omx_ti/audio/omx_dsp_audi
 +var SDMA = xdc.useModule('ti.sdo.linuxutils.sdma.SDMA');
 diff -pruN a/omx_ti/audio/omx-dsp-mp3.cpp b/omx_ti/audio/omx-dsp-mp3.cpp
 --- a/omx_ti/audio/omx-dsp-mp3.cpp	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx-dsp-mp3.cpp	2010-09-27 17:56:47.153630194 +0400
++++ b/omx_ti/audio/omx-dsp-mp3.cpp	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,325 @@
 +/*******************************************************************************
 + * omx-dsp-mp3.cpp
@@ -2402,11 +2404,11 @@ diff -pruN a/omx_ti/audio/omx-dsp-mp3.cpp b/omx_ti/audio/omx-dsp-mp3.cpp
 +
 +/* ...tracing configuration */
 +TRACE_TAG (INIT,    1);
-+TRACE_TAG (DATA,    1);
-+TRACE_TAG (PROCESS, 1);
-+TRACE_TAG (DEBUG,   1);
++TRACE_TAG (DATA,    0);
++TRACE_TAG (PROCESS, 0);
++TRACE_TAG (DEBUG,   0);
 +TRACE_TAG (ERROR,   1);
-+TRACE_TAG (INFO,    1);
++TRACE_TAG (INFO,    0);
 +
 +/*******************************************************************************
 + * Local constants definitions
@@ -2694,7 +2696,7 @@ diff -pruN a/omx_ti/audio/omx-dsp-mp3.cpp b/omx_ti/audio/omx-dsp-mp3.cpp
 +
 diff -pruN a/omx_ti/audio/omx-dsp-mp3.h b/omx_ti/audio/omx-dsp-mp3.h
 --- a/omx_ti/audio/omx-dsp-mp3.h	1970-01-01 03:00:00.000000000 +0300
-+++ b/omx_ti/audio/omx-dsp-mp3.h	2010-09-27 17:59:17.355630794 +0400
++++ b/omx_ti/audio/omx-dsp-mp3.h	2010-11-08 23:52:09.301024619 +0300
 @@ -0,0 +1,94 @@
 +/*******************************************************************************
 + * omx-dsp-mp3.h
