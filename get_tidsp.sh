@@ -14,117 +14,69 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-install_dir=`pwd`/external/ti-dsp
+check_status() {
+    if [ "$?" -ne "0" ]; then
+        echo "Failed get_tidsp.sh, aborting.."
+        exit 1
+    fi
+}
 
-if [ -e "$install_dir"/dvsdk_3_01_00_10 ]
-then
-	exit
-fi
+root_dir=`pwd`
+install_dir=$root_dir/external/ti-dsp
+dvsdk_version=dvsdk_dm3730-evm_4_00_00_22
 
 cd "$install_dir"
-#### Downloading DVSDK files ####
-echo "Downloading DVSDK files..."
-# Checking dvsdk
-if ! [ -e dvsdk_3_01_00_10_Setup.bin ]
-then
-	wget http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/latest/exports/dvsdk_3_01_00_10_Setup.bin
+
+# Download and install the CodeSourcery toolchain as it's required by DVSDK 4.00
+if ! [ -d "arm-2009q1" ]; then
+    if ! [ -e arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 ]
+    then
+        echo "Downloading CodeSourcery toolchain..."
+        wget http://www.codesourcery.com/sgpp/lite/arm/portal/package4571/public/arm-none-linux-gnueabi/arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
+        check_status
+    fi
+
+    if [[ `md5sum arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 | awk '{print$(1)}'` != `cat md5sum.list | grep arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 | awk '{print$(1)}'` ]]
+    then
+        echo "ERROR: arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 md5sum not matched!"
+        exit 1
+    fi
+
+    echo "Installing CodeSourcery..."
+    tar xjf arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 -C "$install_dir"
+    check_status
 fi
 
-# Checking Code Server
-if ! [ -e cs1omap3530_setupLinux_1_01_00-prebuilt-dvsdk3.01.00.10.bin ]
-then
-	wget http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/latest/exports/cs1omap3530_setupLinux_1_01_00-prebuilt-dvsdk3.01.00.10.bin
+# Install the DVSDK using the download DVSDK installer
+if ! [ -d "ti-$dvsdk_version" ]; then
+    if ! [ -e "${dvsdk_version}_setuplinux" ]; then
+        echo "Didn't find ${dvsdk_version}_setuplinux under external/ti-dsp, aborting.."
+        exit 1
+    fi
+
+    if [[ `md5sum ${dvsdk_version}_setuplinux | awk '{print$(1)}'` != `cat md5sum.list | grep ${dvsdk_version}_setuplinux | awk '{print$(1)}'` ]]
+    then
+        echo "ERROR: ${dvsdk_version}_setuplinux md5sum not matched!"
+        exit 1
+    fi
+
+    if ! [ -x "${dvsdk_version}_setuplinux" ]; then
+        chmod 755 ${dvsdk_version}_setuplinux
+        check_status
+    fi
+
+    echo "Installing DVSDK..."
+    ./install_dvsdk4.exp
+
+    echo "Patching DVSDK components for Android..."
+    cd $install_dir/ti-$dvsdk_version
+    check_status
+
+    for file in $install_dir/patches/*; do
+        patch -p1 < $file
+        check_status
+    done
 fi
 
-# Checking Code generation tools
-if ! [ -e ti_cgt_c6000_6.1.12_setup_linux_x86.bin ]
-then
-	wget  http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/latest/exports/ti_cgt_c6000_6.1.12_setup_linux_x86.bin
-fi
-
-# Checking mp3dec
-#if ! [ -e c64xplus_mp3dec_1_31_001_production.bin ]
-#then
-#	wget http://software-dl.ti.com/dsps/dsps_public_sw/sdo_sb/targetcontent/dvsdk/DVSDK_3_00/3_00_02_44/exports/c64xplus_mp3dec_1_31_001_production.bin
-#fi
-
-# Checking ti gstreamer plugins
-if ! [ -e gstreamer_ti ]
-then
-	svn checkout -r 506 --username anonymous --password "" -q https://gstreamer.ti.com/svn/gstreamer_ti/trunk/gstreamer_ti
-fi
-
-#### Checking md5 sums ####
-echo "Checking md5 sums..."
-
-if [ -e codec_engine_2_25_05_16.tar.gz ]
-then
-        if [[ `md5sum codec_engine_2_25_05_16.tar.gz | awk '{print$(1)}'` != `cat md5sum.list | grep codec_engine | awk '{print$(1)}'` ]]
-        then
-                echo "ERROR: codec_engine_2_25_05_16.tar.gz md5sum not matched!"
-                exit
-        fi
-else
-        echo 
-        echo "#####################################################################################################"
-        echo "# Please put codec_engine_2_25_05_16.tar.gz under the external/ti-dsp folder and then restart build #"
-        echo "#####################################################################################################"
-        exit
-fi
-
-if [[ `md5sum dvsdk_3_01_00_10_Setup.bin | awk '{print$(1)}'` != `cat md5sum.list | grep dvsdk_3_01 | awk '{print$(1)}'` ]]
-then
-	echo "ERROR: dvsdk_3_01_00_10_Setup.bin md5sum not matched!"
-	exit
-fi
-
-if [[ `md5sum cs1omap3530_setupLinux_1_01_00-prebuilt-dvsdk3.01.00.10.bin | awk '{print$(1)}'` != `cat md5sum.list | grep cs1omap3530_setupLinux | awk '{print$(1)}'` ]]
-then
-	echo "ERROR: cs1omap3530_setupLinux_1_01_00-prebuilt-dvsdk3.01.00.10.bin md5sum not matched!"
-	exit
-fi
-
-if [[ `md5sum ti_cgt_c6000_6.1.12_setup_linux_x86.bin | awk '{print$(1)}'` != `cat md5sum.list | grep ti_cgt_c6000 | awk '{print$(1)}'` ]]
-then
-	echo "ERROR: ti_cgt_c6000_6.1.12_setup_linux_x86.bin md5sum not matched!"
-	exit
-fi
-
-#if [[ `md5sum c64xplus_mp3dec_1_31_001_production.bin | awk '{print$(1)}'` != `cat md5sum.list | grep c64xplus_mp3dec_1_31_001_production.bin | awk '{print$(1)}'` ]]
-#then
-#	echo "ERROR: c64xplus_mp3dec_1_31_001_production.bin md5sum not matched!"
-#	exit
-#fi
-
-#### Changing bin files mode to 755 ####
-chmod 755 *.bin
-
-#### Installing DVSDK ####
-echo "Installing DVSDK..."
-
-./install_dvsdk.exp &>/dev/null
-./install_cs1omap3530.exp &>/dev/null
-./install_cgt.exp &> /dev/null
-tar zxvf codec_engine_2_25_05_16.tar.gz -C "$install_dir"/dvsdk_3_01_00_10 &> /dev/null
-cp -a gstreamer_ti "$install_dir"/dvsdk_3_01_00_10/
-#./install_mp3dec.exp &> /dev/null
-#tar xvf tmp/dm6446_mp3dec_1_31_001_production.tar -C tmp
-#cp -a tmp/dm6446_mp3dec_1_31_001_production/packages "$install_dir"/dvsdk_3_00_02_44/cs1omap3530_1_00_01
-#rm -rf tmp
-cd -
-
-#### Patching ####
-echo "Patching..."
-patch_dir="$install_dir"/patches
-cd "$install_dir"/dvsdk_3_01_00_10
-ln -s "../gt_dais.h" codec_engine_2_25_05_16/cetools/packages/ti/sdo/fc/utils/gtinfra/gt_dais.h
-patch -p1 < "$patch_dir"/dmai.patch
-patch -p1 < "$patch_dir"/dsplink.patch
-patch -p1 < "$patch_dir"/codec_engine.patch
-patch -p1 < "$patch_dir"/gst_ti.patch
-patch -p1 < "$patch_dir"/0001-omx-base.patch
-patch -p1 < "$patch_dir"/0002-omx-dsp-audio.patch
-patch -p1 < "$patch_dir"/0003-omx-dsp-video.patch
-patch -p1 < "$patch_dir"/0004-omx-dsp-interface.patch
-
-cd -
+cd $root_dir
+exit 0

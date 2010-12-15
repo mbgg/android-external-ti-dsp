@@ -1,0 +1,190 @@
+From 78a479e55220a2a845b16db1d6008ad46407d833 Mon Sep 17 00:00:00 2001
+From: Niclas Anderberg <niclas.anderberg@gmail.com>
+Date: Thu, 9 Dec 2010 14:00:04 +0100
+Subject: [PATCH 3/5] Android modifications for Codec Engine
+
+---
+ codec-engine_2_26_01_09/config.bld                 |   46 ++++++++++++++++++++
+ .../packages/ti/sdo/ce/ipc/dsplink/package.bld     |   17 +++++--
+ .../ti/sdo/ce/osal/linux/GT_config_posix.c         |    2 +
+ .../packages/ti/sdo/ce/osal/linux/Thread_posix.c   |    4 ++
+ 4 files changed, 64 insertions(+), 5 deletions(-)
+ create mode 100644 codec-engine_2_26_01_09/config.bld
+
+diff --git a/codec-engine_2_26_01_09/config.bld b/codec-engine_2_26_01_09/config.bld
+new file mode 100644
+index 0000000..e75674c
+--- /dev/null
++++ b/codec-engine_2_26_01_09/config.bld
+@@ -0,0 +1,46 @@
++/* enable any interesting diagnostics for the TI toolchain */
++var remarks = " -pden -pds=195 ";
++ 
++/* ======== ti.targets.C64P ======== */
++var C64P = xdc.useModule('ti.targets.C64P');
++C64P.rootDir = "" + java.lang.System.getenv("CODEGEN_INSTALL_DIR");
++C64P.ccOpts.prefix += remarks;
++ 
++C64P.platforms = [
++   "ti.platforms.evm3530"
++];
++ 
++delete C64P.profiles["coverage"];
++delete C64P.profiles["profile"];
++delete C64P.profiles["whole_program"];
++delete C64P.profiles["whole_program_debug"];
++ 
++Build.targets.$add(C64P);
++ 
++/* ======== gnu.targets.arm.GCArmv5T ======== */
++var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
++GCArmv5T.rootDir = "" +  java.lang.System.getenv("ANDROID_TOOLCHAIN");
++GCArmv5T.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
++
++GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
++
++GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
++
++GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++
++GCArmv5T.noStdLinkScript = true;
++
++GCArmv5T.platforms = [
++    "ti.platforms.evm3530"
++];
++delete GCArmv5T.profiles["coverage"];
++delete GCArmv5T.profiles["profile"];
++ 
++Build.targets.$add(GCArmv5T);
++ 
++/*
++ * Add this libvers.xdt template to each package being built to auto-generate
++ * symbols used internally to determine compatibility between SW running on
++ * different devices.
++ */
++Pkg.libTemplate = "ti/sdo/ce/utils/libvers.xdt";
+diff --git a/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld b/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld
+index 16b054e..c9205ff 100644
+--- a/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld
++++ b/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld
+@@ -78,6 +78,7 @@ for (var i = 0; i < Build.targets.length; i++) {
+ 
+     if ((":"+targ.getISAChain().join(":")+":").match(/:v5T:|:v6:/i)) {
+         /* DM6446 */
++/*
+         linkGppGlobal.runtimeOS = linkGppGlobal.LINUX;
+         linkGppGlobal.deviceName = linkGppGlobal.DAVINCI;
+ 
+@@ -99,8 +100,9 @@ for (var i = 0; i < Build.targets.length; i++) {
+         lib.addObjects([
+             "Processor_dsplink_linkcfg_DM6446.c"
+         ]);
+-
++*/
+         /* DM6467 */
++/*
+         linkGppGlobal.deviceName = linkGppGlobal.DAVINCIHD;
+ 
+         lib = Pkg.addLibrary("lib/release/ipc_dsplink_6467", targ, {
+@@ -121,8 +123,9 @@ for (var i = 0; i < Build.targets.length; i++) {
+         lib.addObjects([
+             "Processor_dsplink_linkcfg_DM6467.c"
+         ]);
+-
++*/
+         /* OMAP2530 */
++/*
+         linkGppGlobal.deviceName = linkGppGlobal.OMAP2530;
+ 
+         lib = Pkg.addLibrary("lib/release/ipc_dsplink_2530", targ, {
+@@ -143,7 +146,7 @@ for (var i = 0; i < Build.targets.length; i++) {
+         lib.addObjects([
+             "Processor_dsplink_linkcfg_OMAP2530.c"
+         ]);
+-
++*/
+         /* OMAP3530 */
+         linkGppGlobal.deviceName = linkGppGlobal.OMAP3530;
+ 
+@@ -167,6 +170,7 @@ for (var i = 0; i < Build.targets.length; i++) {
+         ]);
+ 
+         /* DM357 */
++/*
+         linkGppGlobal.deviceName = linkGppGlobal.DM357;
+ 
+         lib = Pkg.addLibrary("lib/release/ipc_dsplink_357", targ, {
+@@ -187,8 +191,9 @@ for (var i = 0; i < Build.targets.length; i++) {
+         lib.addObjects([
+             "Processor_dsplink_linkcfg_DM357.c"
+         ]);
+-
++*/
+         /* OMAPL137 */
++/*
+         linkGppGlobal.deviceName = linkGppGlobal.OMAPL1XX;
+ 
+         lib = Pkg.addLibrary("lib/release/ipc_dsplink_137", targ, {
+@@ -209,8 +214,9 @@ for (var i = 0; i < Build.targets.length; i++) {
+         lib.addObjects([
+             "Processor_dsplink_linkcfg_OMAPL137.c"
+         ]);
+-
++*/
+         /* OMAPL138 */
++/*
+         linkGppGlobal.deviceName = linkGppGlobal.OMAPL138;
+ 
+         lib = Pkg.addLibrary("lib/release/ipc_dsplink_138", targ, {
+@@ -231,6 +237,7 @@ for (var i = 0; i < Build.targets.length; i++) {
+         lib.addObjects([
+             "Processor_dsplink_linkcfg_OMAPL138.c"
+         ]);
++*/
+     }
+     else {
+         if ((":"+targ.getISAChain().join(":")+":").match(/:v4T:/i)) {
+diff --git a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
+index c901228..bc2b1f0 100644
+--- a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
++++ b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
+@@ -129,7 +129,9 @@ Int GTConfig_posixInit(Void)
+         /* initialize mutex */
+         pthread_mutexattr_init(&mattrs);
+         /* "adaptive" below means "fast", as opposed to "recursive" */
++#ifndef _ANDROID_
+         pthread_mutexattr_settype(&mattrs, PTHREAD_MUTEX_ADAPTIVE_NP);
++#endif
+         pthread_mutex_init(&mutex,  &mattrs);
+ 
+         /* call Global_atexit() to schedule our cleanup. Global module
+diff --git a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c
+index e3e0444..a28a532 100644
+--- a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c
++++ b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c
+@@ -159,7 +159,9 @@ Void Thread_delete(Thread_Handle task)
+             if (cancel) {
+                 int result;
+ 
++#ifndef _ANDROID_
+                 result = pthread_cancel(task->pthread);
++#endif
+                 GT_1trace(curTrace, GT_4CLASS, "Thread_delete> pthread_cancel "
+                     "(0x%x)\n", result);
+                 result = pthread_join(task->pthread, NULL);
+@@ -328,10 +330,12 @@ static void runStub(Thread_Obj *task)
+ {
+     pthread_setspecific(taskKey, task);
+ 
++#ifndef _ANDROID_
+     /* PTHREAD_CANCEL_ASYNCHRONOUS is potentially dangerous: this allows
+      * the thread to be cancelled in the middle of malloc, for example.
+      */
+     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
++#endif
+ 
+     task->exitStatus = (Int)task->fxn(
+         task->args[0], task->args[1], task->args[2], task->args[3],
+-- 
+1.7.0.4
+

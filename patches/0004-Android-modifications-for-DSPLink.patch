@@ -1,0 +1,29 @@
+From 36379af9a10f0130d5ce41c9a3c57168f44a9128 Mon Sep 17 00:00:00 2001
+From: Niclas Anderberg <niclas.anderberg@gmail.com>
+Date: Thu, 9 Dec 2010 14:03:41 +0100
+Subject: [PATCH 4/5] Android modifications for DSPLink
+
+---
+ .../dsplink/gpp/src/api/Linux/_notify.c            |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c b/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c
+index 269e900..47a3f4b 100644
+--- a/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c
++++ b/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c
+@@ -320,10 +320,12 @@ NOTIFY_eventWorker (IN     void * arg)
+         pthread_exit (NULL) ;
+     }
+ 
++#ifndef _ANDROID_
+     if (pthread_sigmask (SIG_BLOCK, &blockSet, NULL) != 0) {
+         perror ("Event worker thread error in setting sigmask") ;
+         pthread_exit (NULL) ;
+     }
++#endif
+ 
+     drvHandle = open (LINK_DRIVER, O_RDWR | O_SYNC) ;
+     if (drvHandle < 0) {
+-- 
+1.7.0.4
+

@@ -1,0 +1,40 @@
+/*
+ *  ======== config.bld ========
+ * User note: YOU MUST MODIFY THIS FILE TO SPECIFY THE COMPILER TOOL PATHS.
+ *
+ * Edit this file to specify compiler toolchain paths, and any custom
+ * compiler/linker options.
+ */
+
+/* location of your C6000 codegen tools */
+var C64P = xdc.useModule('ti.targets.C64P');
+
+
+C64P.rootDir = "/opt/dmsw/cg6x_6_0_16/";
+C64P.platform = "ti.platforms.evmDM6446"; 
+
+var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
+GCArmv5T.rootDir = "" + java.lang.System.getenv("ANDROID_TOOLCHAIN_PATH");
+GCArmv5T.LONGNAME = java.lang.System.getenv("ANDROID_TOOLCHAIN_LONGNAME");
+
+GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
+
+GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
+GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
+
+GCArmv5T.platforms = [
+    "ti.platforms.evm3530"
+];
+
+Build.targets.$add(GCArmv5T);
+
+/*
+ *  ======== Build.targets ========
+ * list of targets (ISAs + compilers) to build for
+ */
+/*
+Build.targets = [
+    C64P,
+];
+*/
+

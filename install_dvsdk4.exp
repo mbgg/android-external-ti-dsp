@@ -1,5 +1,5 @@
 #!/usr/bin/expect -f
-# Copyright (C) 2010 Yegor Yelizarov <yegor.yelizarov@gmail.com>
+# Copyright (C) 2010 Texas Instruments ITC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,17 +15,15 @@
 
 set pwd [exec pwd]
 set timeout -1
-spawn ./ti_cgt_c6000_6.1.12_setup_linux_x86.bin --prefix $pwd/dvsdk_3_01_00_10/TI_CGT_C6000_6.1.12 --mode console
-expect -re ".*This will install C6000 Code.*"
+spawn ./dvsdk_dm3730-evm_4_00_00_22_setuplinux --mode console --forcehost
+expect -re ".*This will install dvsdk on your computer.*"
 send -- "y\r"
-expect -re ".*-- Press space to continue or 'q' to quit --"
-send -- "q"
-expect -re ".*Do you accept the TI CG EULA.*"
+expect -re ".*\].*"
+send -- "$pwd/arm-2009q1/bin\r"
+expect -re ".*Press Space to Continue.*"
+send -- " "
+expect -re ".*Enter y if you accept ALL license agreements, else enter n.*"
 send -- "y\r"
-expect -re ".*Where do you want to install.*"
-send -- "\r"
-expect -re ".*Remember to set environment.*"
-send -- " "
-expect -re ".*Press space to continue.*"
-send -- " "
+expect -re ".*Where do you want to install dvsdk?.*"
+send -- "$pwd/ti-dvsdk_dm3730-evm_4_00_00_22\r"
 expect eof

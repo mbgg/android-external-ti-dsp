@@ -1,0 +1,97 @@
+From 2310ece24a85b7b73eb26fb2348c02ab19aacb47 Mon Sep 17 00:00:00 2001
+From: Niclas Anderberg <niclas.anderberg@gmail.com>
+Date: Thu, 9 Dec 2010 13:53:23 +0100
+Subject: [PATCH 2/5] Android modifications for c6accel
+
+---
+ c6accel_1_01_00_01/config.bld            |    1 +
+ c6accel_1_01_00_01/soc/Makefile          |    2 +-
+ c6accel_1_01_00_01/soc/app/Makefile      |    4 +++-
+ c6accel_1_01_00_01/soc/app/timeObj.h     |    1 +
+ c6accel_1_01_00_01/soc/c6accelw/Makefile |    4 +++-
+ 5 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/c6accel_1_01_00_01/config.bld b/c6accel_1_01_00_01/config.bld
+index 57ec08e..0819859 100755
+--- a/c6accel_1_01_00_01/config.bld
++++ b/c6accel_1_01_00_01/config.bld
+@@ -76,6 +76,7 @@ var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
+ GCArmv5T.LONGNAME = longName;
+ GCArmv5T.platform = java.lang.System.getenv("PLATFORM_XDC");
+ GCArmv5T.rootDir = tooldir;
++GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
+ 
+ Build.targets = [
+ ];
+diff --git a/c6accel_1_01_00_01/soc/Makefile b/c6accel_1_01_00_01/soc/Makefile
+index 098ea2c..73aad00 100755
+--- a/c6accel_1_01_00_01/soc/Makefile
++++ b/c6accel_1_01_00_01/soc/Makefile
+@@ -37,7 +37,7 @@ export XDCTARGETS
+ 
+ .PHONY: c6accelw codec_packages server c6accel_app release_packages clean clean_packages
+ 
+-all: codec_packages server c6accelw c6accel_app
++all: codec_packages server c6accelw
+ 
+ release: release_packages
+ 
+diff --git a/c6accel_1_01_00_01/soc/app/Makefile b/c6accel_1_01_00_01/soc/app/Makefile
+index 2148757..c2c96a6 100755
+--- a/c6accel_1_01_00_01/soc/app/Makefile
++++ b/c6accel_1_01_00_01/soc/app/Makefile
+@@ -52,6 +52,8 @@ export PLATFORM_XDC
+ CONFIGURO = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
+ CONFIG_BLD = ../../config.bld
+ 
++C_FLAGS += $(ANDROID_CFLAGS)
++
+ ifeq ($(BUILD_TYPE), release)
+ ifeq ($(ARM_ISA),armv7-a)
+     C_FLAGS	+= -O3 -march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -mfloat-abi=softfp
+@@ -72,7 +74,7 @@ ifeq ($(PLATFORM),omapl138)
+     C_FLAGS	+= -DPLATFORM=138
+ endif
+ 
+-LD_FLAGS += -L$(LINUXLIBS_INSTALL_DIR)/lib -lm -lpthread
++LD_FLAGS += -lm -lcutils $(ANDROID_LD_FLAGS)
+ C6ACCEL_LIB += ../c6accelw/lib/c6accelw_$(PLATFORM).a470MV
+ 
+ COMPILE.c = $(VERBOSE) $(CSTOOL_PREFIX)gcc $(CPP_FLAGS) $(C_FLAGS) $(CPP_FLAGS) -c
+diff --git a/c6accel_1_01_00_01/soc/app/timeObj.h b/c6accel_1_01_00_01/soc/app/timeObj.h
+index 50e2d5f..a75455d 100755
+--- a/c6accel_1_01_00_01/soc/app/timeObj.h
++++ b/c6accel_1_01_00_01/soc/app/timeObj.h
+@@ -34,6 +34,7 @@
+ #ifndef TIMEOBJ_H
+ #define TIMEOBJ_H
+ 
++#include <sys/time.h>
+ 
+ // Define a structure to allow benchmarking using gettimeofday()
+ typedef struct Time_Object {
+diff --git a/c6accel_1_01_00_01/soc/c6accelw/Makefile b/c6accel_1_01_00_01/soc/c6accelw/Makefile
+index cc58acf..67a0284 100755
+--- a/c6accel_1_01_00_01/soc/c6accelw/Makefile
++++ b/c6accel_1_01_00_01/soc/c6accelw/Makefile
+@@ -20,6 +20,8 @@ BUILD_TYPE=release
+ 
+ CPP_FLAGS += -I../packages -I$(XDC_INSTALL_DIR)/packages -I$(CE_INSTALL_DIR)/packages -I$(XDAIS_INSTALL_DIR)/packages -Dxdc_target_name__=arm/GCArmv5T -Dxdc_target_types__=gnu/targets/std.h
+ 
++C_FLAGS += $(ANDROID_CFLAGS)
++
+ ifeq ($(BUILD_TYPE), release)
+ ifeq ($(ARM_ISA),armv7-a)
+     C_FLAGS	+= -O3 -march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -mfloat-abi=softfp
+@@ -33,7 +35,7 @@ else
+     C_FLAGS	+= -Wall -g
+ endif
+ 
+-LD_FLAGS += -L$(LINUXLIBS_INSTALL_DIR)/lib
++LD_FLAGS +=
+ AR_FLAGS += 
+ 
+ COMPILE.c = $(VERBOSE) $(CSTOOL_PREFIX)gcc $(CPP_FLAGS) $(C_FLAGS) -c
+-- 
+1.7.0.4
+

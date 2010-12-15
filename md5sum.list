@@ -1,5 +1,2 @@
-5cf57ab44f655943b307db38eef31059  ./dvsdk_3_01_00_10_Setup.bin
-b9483c218fddb2eaca000cf68382862a  ./cs1omap3530_setupLinux_1_01_00-prebuilt-dvsdk3.01.00.10.bin
-c97691d0d5ced3b9deb5f643475c74c8  ./ti_cgt_c6000_6.1.12_setup_linux_x86.bin
-aaaa140af99dae91b5bac7da9e6fb3c1  ./c64xplus_mp3dec_1_31_001_production.bin
-f74c13c8a9b04440a6175972664802ca  ./codec_engine_2_25_05_16.tar.gz
+82f912c77db6ce1c437e0654daad415f  dvsdk_dm3730-evm_4_00_00_22_setuplinux
+1a6e88782f08b09a0e6cef545a1712ec  arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2

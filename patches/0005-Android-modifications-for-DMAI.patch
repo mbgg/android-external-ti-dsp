@@ -1,0 +1,64 @@
+From f4e09c2553c5055d3c7b730d7d3aeb2a8d49bd97 Mon Sep 17 00:00:00 2001
+From: Niclas Anderberg <niclas.anderberg@gmail.com>
+Date: Thu, 9 Dec 2010 14:05:48 +0100
+Subject: [PATCH 5/5] Android modifications for DMAI
+
+---
+ dmai_2_20_00_10/packages/config.bld                |    1 +
+ dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile      |    4 ++--
+ .../packages/ti/sdo/dmai/apps/Makefile.app         |    5 +++--
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/dmai_2_20_00_10/packages/config.bld b/dmai_2_20_00_10/packages/config.bld
+index 8c2e96e..6e24fa4 100644
+--- a/dmai_2_20_00_10/packages/config.bld
++++ b/dmai_2_20_00_10/packages/config.bld
+@@ -72,6 +72,7 @@ var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
+ GCArmv5T.LONGNAME = longName;
+ GCArmv5T.platform = java.lang.System.getenv("PLATFORM_XDC");
+ GCArmv5T.rootDir = tooldir;
++GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
+ 
+ Build.targets = [
+ ];
+diff --git a/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile b/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile
+index 739cb4d..f92faff 100644
+--- a/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile
++++ b/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile
+@@ -103,10 +103,10 @@ XDCPATH	+= $(XDC_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(CODEC_INST
+ 
+ CPP_FLAGS	+= -I$(XDC_INSTALL_DIR)/packages -I$(DMAI_INSTALL_DIR)/packages -I$(CE_INSTALL_DIR)/packages -I$(FC_INSTALL_DIR)/packages -I$(XDAIS_INSTALL_DIR)/packages -I$(CODEC_INSTALL_DIR)/packages -DDmai_Device_$(PLATFORM_DEVICE)
+ 
+-GCC_CPP_FLAGS	+= $(CPP_FLAGS) -I$(LINUXKERNEL_INSTALL_DIR)/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/$(PLATFORM_ARCH)/include $(HAVE_AUTOCONFIG) -I$(CMEM_INSTALL_DIR)/packages -I$(LINK_INSTALL_DIR) -DDmai_BuildOs_linux -Dxdc_target_types__=gnu/targets/std.h -I$(LINUXLIBS_INSTALL_DIR)/include -Dxdc_target_name__=arm/GCArmv5T
++GCC_CPP_FLAGS	+= $(CPP_FLAGS) -I$(LINUXKERNEL_INSTALL_DIR)/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/$(PLATFORM_ARCH)/include $(HAVE_AUTOCONFIG) -I$(CMEM_INSTALL_DIR)/packages -I$(LINK_INSTALL_DIR) -DDmai_BuildOs_linux -Dxdc_target_types__=gnu/targets/std.h -Dxdc_target_name__=arm/GCArmv5T
+ C64P_CPP_FLAGS	+= $(CPP_FLAGS) -I$(BIOS_INSTALL_DIR)/packages/ti/bios/include -I$(BIOS_INSTALL_DIR)/packages -DDmai_BuildOs_bios -Dxdc_target__='<ti/targets/std.h>' -I$(CODEGEN_INSTALL_DIR)/include -mv6400+ -pdse225 -eo$(PLATFORM_DEVICE).o$(EXT)
+ 
+-GCC_C_FLAGS	+= $(C_FLAGS) -Wall -Werror
++GCC_C_FLAGS	+= $(C_FLAGS) -Wall $(ANDROID_CFLAGS)
+ C64P_C_FLAGS	+= $(C_FLAGS)
+ 
+ GNU_AR_FLAGS	+= $(AR_FLAGS)
+diff --git a/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app b/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app
+index 0563a34..94c4320 100644
+--- a/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app
++++ b/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app
+@@ -115,13 +115,14 @@ CONFIGURO_BIOS	= $(PRE) $(XDC_INSTALL_DIR)/xs xdc.tools.configuro -c $(CODEGEN_I
+ 
+ CPP_FLAGS	+= $(PLATFORM_CPPFLAGS)
+ 
+-GCC_C_FLAGS 	= $(C_FLAGS) -Wall -Werror
++GCC_C_FLAGS 	= $(C_FLAGS) -Wall $(ANDROID_CFLAGS)
+ C64P_C_FLAGS	= $(C_FLAGS)
+ 
+ GCC_CPP_FLAGS  	= $(CPP_FLAGS) -I$(LINUXKERNEL_INSTALL_DIR)/include
+ C64P_CPP_FLAGS	= $(CPP_FLAGS) -pdse225 -I$(CODEGEN_INSTALL_DIR)/include -mv6400+ -I$(BIOS_INSTALL_DIR)/packages/ti/bios/include -eo$(PLATFORM_DEVICE).o$(EXT)
+ 
+-GCC_LD_FLAGS	= $(LD_FLAGS) -lpthread -lm -L$(LINUXLIBS_INSTALL_DIR)/lib -lasound
++GCC_LD_FLAGS	= $(LD_FLAGS) -lcutils -lm -lasound $(ANDROID_LDFLAGS)
++#GCC_LD_FLAGS	= $(LD_FLAGS) -lcutils -lm $(LINUXLIBS_INSTALL_DIR)/lib -lasound $(ANDROID_LDFLAGS)
+ C64P_LD_FLAGS	= $(LD_FLAGS) -z -w -x -c -i$(RTDX_INSTALL_DIR)/packages/ti/rtdx/iom/lib/debug -i$(RTDX_INSTALL_DIR)/packages/ti/rtdx/cio/lib/release -i$(RTDX_INSTALL_DIR)/packages/ti/rtdx/lib/c6000 
+ 
+ SOURCES 	= $(wildcard *.c)
+-- 
+1.7.0.4
+
