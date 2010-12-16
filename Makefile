@@ -95,9 +95,9 @@ ANDROID_CFLAGS=$(BIONIC_LIBC_INCS) $(ANDROID_CC_FLAGS)
 
 export ANDROID_TOOLCHAIN_PATH ANDROID_TOOLCHAIN_PREFIX ANDROID_TOOLCHAIN_LONGNAME ANDROID_TOOLCHAIN BIONIC_LIBC_INCS ANDROID_ROOT_DIR ANDROID_CC_FLAGS ANDROID_LD_FLAGS ANDROID_CFLAGS
 
-all:	dvsdk omx_ti install
+all:	dvsdk  install
 
-clean:	dvsdk_clean omx_ti_clean
+clean:	dvsdk_clean 
 
 dvsdk:
 	make -C $(DVSDK_INSTALL_DIR) dsplink_arm
@@ -123,86 +123,6 @@ dvsdk_clean:
 	make -C $(DVSDK_INSTALL_DIR) dmai_clean
 	make -C $(DVSDK_INSTALL_DIR) c6accel_clean
 
-#-------------- OpenMax components -----------------
-
-OMX_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/omx_ti
-OMX_VIDEO_INSTALL_DIR := $(OMX_INSTALL_DIR)/video
-OMX_AUDIO_INSTALL_DIR := $(OMX_INSTALL_DIR)/audio
-OMX_IFACE_INSTALL_DIR := $(OMX_INSTALL_DIR)/interface
-
-OMX_CFLAGS = "-I.. \
-	$(BIONIC_LIBC_INCS)	\
-	-I$(ANDROID_ROOT_DIR)/frameworks/base/include \
-	-I$(ANDROID_ROOT_DIR)/system/core/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/codecs_v2/omx/omx_common/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/codecs_v2/omx/omx_queue/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/codecs_v2/omx/omx_proxy/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/extern_libs_v2/khronos/openmax/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/codecs_v2/omx/omx_baseclass/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/osclmemory/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/osclbase/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/osclerror/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/osclproc/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/osclutil/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/oscllib/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/pvlogger/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/android \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/engines/common/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/engines/player/config/core \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/engines/player/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/extern_libs_v2/khronos/openmax/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/nodes/pvmediaoutputnode/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/nodes/pvdownloadmanagernode/config/opencore \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/pvmi/pvmf/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/fileformats/mp4/parser/config/opencore \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/config/android \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/oscl/oscl/config/shared \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/engines/author/include \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/android/drm/oma1/src \
-	-I$(ANDROID_ROOT_DIR)/external/opencore/build_config/opencore_dynamic \
-	$(ANDROID_CPP_FLAGS) \
-	-DENABLE_SHAREDFD_PLAYBACK -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -DUSE_CML2_CONFIG -DHAS_OSCL_LIB_SUPPORT -MD"
-
-OMX_LDFLAGS = -nostdlib -Wl,-soname,libagl.so \
-	-Wl,-T,$(ANDROID_ROOT_DIR)/build/core/armelf.xsc \
-	-Wl,--gc-sections -Wl,-shared,-Bsymbolic -Wl,--no-whole-archive \
-	-L$(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/obj/lib \
-	-lstdc++ -lc -lm
-
-OMX_IFACE_LDFLAGS = "$(OMX_LDFLAGS) -Wl,--no-undefined -llog"
-
-OMX_EXT_LDFLAGS = "$(OMX_LDFLAGS) -lopencore_common -lomx_sharedlibrary -ldspengineiface -llog"
-
-OMX_XDCPATH = ".;$(XDC_INSTALL_DIR)/packages;$(LINK_INSTALL_DIR);$(FC_INSTALL_DIR)/packages;$(CE_INSTALL_DIR)/packages;$(XDAIS_INSTALL_DIR)/packages;$(CODEC_INSTALL_DIR)/packages;$(CMEM_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(LPM_INSTALL_DIR)/packages;$(XDC_USER_PATH);$(EDMA3_LLD_INSTALL_DIR)/packages;$(C6ACCEL_INSTALL_DIR)/soc/packages"
-
-.PHONY:	omx_ti
-omx_ti:
-	make -C $(OMX_IFACE_INSTALL_DIR) \
-		OMX_XDCPATH=$(OMX_XDCPATH) \
-		XDC_INSTALL_DIR=$(XDC_INSTALL_DIR) \
-		CFLAGS=$(OMX_CFLAGS) \
-		LDFLAGS=$(OMX_IFACE_LDFLAGS) \
-		all
-	cp $(OMX_IFACE_INSTALL_DIR)/libdspengineiface.so \
-		$(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/obj/lib
-	make -C $(OMX_VIDEO_INSTALL_DIR) \
-		OMX_XDCPATH=$(OMX_XDCPATH) \
-		XDC_INSTALL_DIR=$(XDC_INSTALL_DIR) \
-		CFLAGS=$(OMX_CFLAGS) \
-		LDFLAGS=$(OMX_EXT_LDFLAGS) \
-		all
-	make -C $(OMX_AUDIO_INSTALL_DIR) \
-		OMX_XDCPATH=$(OMX_XDCPATH) \
-		XDC_INSTALL_DIR=$(XDC_INSTALL_DIR) \
-		CFLAGS=$(OMX_CFLAGS) \
-		LDFLAGS=$(OMX_EXT_LDFLAGS) \
-		all
-
-omx_ti_clean:
-	make -C $(OMX_IFACE_INSTALL_DIR) clean
-	make -C $(OMX_VIDEO_INSTALL_DIR) clean
-	make -C $(OMX_AUDIO_INSTALL_DIR) clean
-
 # Install resulting binaries in the Android filesystem
 
 install:
@@ -212,6 +132,3 @@ install:
 	cp $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module/cmemk.ko $(DVSDK_TARGET_DIR)
 	cp $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module/sdmak.ko $(DVSDK_TARGET_DIR)
 	cp $(CODEC_INSTALL_DIR)/packages/ti/sdo/server/cs/bin/cs.x64P $(DVSDK_TARGET_DIR)
-	cp $(OMX_VIDEO_INSTALL_DIR)/libomx_dsp_video_sharedlibrary.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
-	cp $(OMX_AUDIO_INSTALL_DIR)/libomx_dsp_audio_sharedlibrary.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
-	cp $(OMX_IFACE_INSTALL_DIR)/libdspengineiface.so $(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/lib
