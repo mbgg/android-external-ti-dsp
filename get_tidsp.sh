@@ -27,26 +27,6 @@ dvsdk_version=dvsdk_dm3730-evm_4_00_00_22
 
 cd "$install_dir"
 
-# Download and install the CodeSourcery toolchain as it's required by DVSDK 4.00
-if ! [ -d "arm-2009q1" ]; then
-    if ! [ -e arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 ]
-    then
-        echo "Downloading CodeSourcery toolchain..."
-        wget http://www.codesourcery.com/sgpp/lite/arm/portal/package4571/public/arm-none-linux-gnueabi/arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2
-        check_status
-    fi
-
-    if [[ `md5sum arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 | awk '{print$(1)}'` != `cat md5sum.list | grep arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 | awk '{print$(1)}'` ]]
-    then
-        echo "ERROR: arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 md5sum not matched!"
-        exit 1
-    fi
-
-    echo "Installing CodeSourcery..."
-    tar xjf arm-2009q1-203-arm-none-linux-gnueabi-i686-pc-linux-gnu.tar.bz2 -C "$install_dir"
-    check_status
-fi
-
 # Install the DVSDK using the download DVSDK installer
 if ! [ -d "ti-$dvsdk_version" ]; then
     if ! [ -e "${dvsdk_version}_setuplinux" ]; then
@@ -76,6 +56,9 @@ if ! [ -d "ti-$dvsdk_version" ]; then
         patch -p1 < $file
         check_status
     done
+
+    sed -i -e  "s~CSTOOL_DIR=.*$~CSTOOL_DIR=${TOOLS_DIR}~g" -e 's~CSTOOL_PREFIX=\$(CSTOOL_DIR)/bin/arm-none-linux-gnueabi-~CSTOOL_PREFIX=\$\(CSTOOL_DIR\)/bin/arm-eabi-~g' ./Rules.make
+    check_status
 fi
 
 cd $root_dir

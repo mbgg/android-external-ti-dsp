@@ -19,7 +19,7 @@ spawn ./dvsdk_dm3730-evm_4_00_00_22_setuplinux --mode console --forcehost
 expect -re ".*This will install dvsdk on your computer.*"
 send -- "y\r"
 expect -re ".*\].*"
-send -- "$pwd/arm-2009q1/bin\r"
+send -- "$pwd/fake-toolchain/\r"
 expect -re ".*Press Space to Continue.*"
 send -- " "
 expect -re ".*Enter y if you accept ALL license agreements, else enter n.*"
