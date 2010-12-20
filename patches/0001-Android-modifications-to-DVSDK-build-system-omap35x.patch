@@ -1,28 +1,30 @@
-From 4aaf6a4a808653c6a06b6f236c548971e4db3f7a Mon Sep 17 00:00:00 2001
-From: Niclas Anderberg <niclas.anderberg@gmail.com>
-Date: Thu, 9 Dec 2010 13:36:02 +0100
-Subject: [PATCH 1/5] Android modifications to DVSDK build system
+From 050e3649d27c9a15d8aa374385f77f0855e61fde Mon Sep 17 00:00:00 2001
+From: biinn <binmlist@gmail.com>
+Date: Mon, 17 Jan 2011 11:28:38 -0600
+Subject: [PATCH] Android modifications to DVSDK build system
 
 ---
- Makefile   |  136 ++++++++++++++++++++++++++++++++++++++++++------------------
+ Makefile   |  139 ++++++++++++++++++++---------
  Rules.make |    2 +-
- 2 files changed, 97 insertions(+), 41 deletions(-)
+ 2 files changed, 99 insertions(+), 42 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index bca5345..4ba8710 100755
+index 31b1129..561f12a 100755
 --- a/Makefile
 +++ b/Makefile
-@@ -222,12 +222,20 @@ psp_examples_install:
+@@ -239,12 +239,21 @@ psp_examples_install:
  # is defined.
  #==============================================================================
  cmem:
 -	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface ../../lib/cmem.a470MV
+-	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module
 +	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface \
 +	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
 +	C_FLAGS="$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS) -I. -I../../include" \
 +	LD_FLAGS="$(ANDROID_LD_FLAGS)" \
 +	../../lib/cmem.a470MV
- 	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module
++	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module \
++	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN)
  
  cmem_clean:
  	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module clean
@@ -34,8 +36,8 @@ index bca5345..4ba8710 100755
 +	clean
  
  cmem_install:
- 	install -d $(EXEC_DIR)/cmem
-@@ -238,7 +246,11 @@ cmem_install:
+ 	install -d $(EXEC_DIR)/lib/modules/$(KERNEL_VERSION)/kernel/drivers/dsp
+@@ -255,7 +264,11 @@
  # target is defined.
  #==============================================================================
  sdma:
@@ -48,7 +50,7 @@ index bca5345..4ba8710 100755
  
  sdma_clean:
  	$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module clean RULES_MAKE=$(DVSDK_INSTALL_DIR)/Rules.make
-@@ -250,13 +262,13 @@ sdma_clean:
+@@ -271,13 +284,13 @@
  lpm:
  	$(MAKE) -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
  		LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
@@ -64,7 +66,7 @@ index bca5345..4ba8710 100755
  	DSPLINK_REPO=$(LINK_INSTALL_DIR) clean
  
  lpm_install:
-@@ -356,13 +368,15 @@ dmai:
+@@ -377,13 +390,15 @@
  	XDAIS_INSTALL_DIR_$(DMAI_PLATFORM)=$(XDAIS_INSTALL_DIR) \
  	LINUXLIBS_INSTALL_DIR_$(DMAI_PLATFORM)=$(LINUXLIBS_INSTALL_DIR) \
  	LINUXKERNEL_INSTALL_DIR_$(DMAI_PLATFORM)=$(LINUXKERNEL_INSTALL_DIR) \
@@ -74,7 +76,7 @@ index bca5345..4ba8710 100755
  	LINK_INSTALL_DIR_$(DMAI_PLATFORM)=$(LINK_INSTALL_DIR) \
  	C6ACCEL_INSTALL_DIR_$(DMAI_PLATFORM)=$(C6ACCEL_INSTALL_DIR) \
  	LPM_INSTALL_DIR_$(DMAI_PLATFORM)=$(LPM_INSTALL_DIR) \
- 	C6ACCEL_INSTALL_DIR_$(DMAI_PLATFORM)_al=$(C6ACCEL_INSTALL_DIR) \
+ 	C6ACCEL_INSTALL_DIR_$(DMAI_PLATFORM)=$(C6ACCEL_INSTALL_DIR) \
 -	VERBOSE=false \
 +	ANDROID_CFLAGS="$(BIONIC_LIBC_INCS) $(ANDROID_CC_FLAGS) -I$(ANDROID_ROOT_DIR)/external/alsa-lib/include -I$(ANDROID_ROOT_DIR)/frameworks/base/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/mach-omap2/include -D__deprecated=\"\"" \
 +	ANDROID_LDFLAGS="$(ANDROID_LD_FLAGS) -L$(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/obj/STATIC_LIBRARIES/libasound_intermediates" \
@@ -82,7 +84,7 @@ index bca5345..4ba8710 100755
  	all
  	
  dmai_clean:
-@@ -376,6 +390,30 @@ dmai_install:
+@@ -397,6 +412,30 @@
  	install
  
  ###############################################################################
@@ -113,7 +115,7 @@ index bca5345..4ba8710 100755
  # Build codec engine examples
  ###############################################################################
  ceexamples_apps:
-@@ -577,28 +615,40 @@ dsplink_arm_clean:
+@@ -598,28 +637,40 @@
  ifeq ($(FIND_DSPLINKCONFIG), $(LINK_INSTALL_DIR)/dsplink/config/BUILD/CURRENTCFG.MK)
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
  	$(MAKE) -C $(LINK_INSTALL_DIR)/dsplink/gpp/src \
@@ -166,15 +168,15 @@ index bca5345..4ba8710 100755
  	all
  
  dsplink_dsp_clean:
-@@ -621,34 +671,40 @@ dsplink_samples_clean:
+@@ -642,17 +693,20 @@
  ifeq ($(FIND_DSPLINKCONFIG), $(LINK_INSTALL_DIR)/dsplink/config/BUILD/CURRENTCFG.MK)
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
  	$(MAKE)	-C $(LINK_INSTALL_DIR)/dsplink/gpp/src/samples \
 -	BASE_TOOLCHAIN=$(CSTOOL_DIR) \
--	BASE_CGTOOLS=${CSTOOL_DIR}/bin \
--	OSINC_PLATFORM="$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include" \
--	OSINC_TARGET="${CSTOOL_DIR}/target/usr/include" \
--	CROSS_COMPILE="$(CSTOOL_PREFIX)" \
+-	BASE_CGTOOLS=$(CSTOOL_DIR)/bin \
+-	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
+-	OSINC_TARGET=$(CSTOOL_DIR)/target/usr/include \
+-	CROSS_COMPILE=$(CSTOOL_PREFIX) \
 -	CC=$(CSTOOL_PREFIX)gcc \
 -	COMPILER=$(CSTOOL_PREFIX)gcc \
 -	ARCHIVER=$(CSTOOL_PREFIX)ar \
@@ -195,15 +197,16 @@ index bca5345..4ba8710 100755
 +	USR_LD_FLAGS='' \
 +	EXE_LD_FLAGS='$(ANDROID_LD_FLAGS)' \
  	clean
- endif
- 	
+ 
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+@@ -666,17 +720,20 @@
  dsplink_samples:
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
  	$(MAKE)	-C $(LINK_INSTALL_DIR)/dsplink/gpp/src/samples \
 -	BASE_TOOLCHAIN=$(CSTOOL_DIR) \
--	BASE_CGTOOLS=${CSTOOL_DIR}/bin \
--	OSINC_PLATFORM="$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include" \
--	OSINC_TARGET="${CSTOOL_DIR}/target/usr/include" \
+-	BASE_CGTOOLS=$(CSTOOL_DIR)/bin \
+-	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
+-	OSINC_TARGET=$(CSTOOL_DIR)/target/usr/include \
 -	CROSS_COMPILE="$(CSTOOL_PREFIX)" \
 -	CC=$(CSTOOL_PREFIX)gcc \
 -	COMPILER=$(CSTOOL_PREFIX)gcc \
@@ -226,8 +229,8 @@ index bca5345..4ba8710 100755
 +	EXE_LD_FLAGS='$(ANDROID_LD_FLAGS)' \
  	all
  
- dsplink_dsp_genpackage:
-@@ -694,7 +750,7 @@ c6accel:
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+@@ -732,7 +789,7 @@
  	SERVER_INSTALL_DIR="$(CODEC_INSTALL_DIR)" \
  	C6ACCEL_INSTALL_DIR="$(C6ACCEL_INSTALL_DIR)" \
  	CSTOOL_DIR="$(CSTOOL_DIR)" \
@@ -237,7 +240,7 @@ index bca5345..4ba8710 100755
  
  c6accel_clean:
 diff --git a/Rules.make b/Rules.make
-index cb7c33e..68b49b6 100755
+index 69c4748..7ba0e64 100755
 --- a/Rules.make
 +++ b/Rules.make
 @@ -55,7 +55,7 @@ CODEGEN_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/cgt6x_6_1_14

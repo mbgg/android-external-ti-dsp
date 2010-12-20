@@ -1,0 +1,257 @@
+From 050e3649d27c9a15d8aa374385f77f0855e61fde Mon Sep 17 00:00:00 2001
+From: biinn <binmlist@gmail.com>
+Date: Mon, 17 Jan 2011 11:28:38 -0600
+Subject: [PATCH] Android modifications to DVSDK build system
+
+---
+ Makefile   |  139 ++++++++++++++++++++---------
+ Rules.make |    2 +-
+ 2 files changed, 99 insertions(+), 42 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 31b1129..561f12a 100755
+--- a/Makefile
++++ b/Makefile
+@@ -238,12 +238,21 @@ psp_examples_install:
+ # is defined.
+ #==============================================================================
+ cmem:
+-	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface ../../lib/cmem.a470MV
+-	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module
++	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface \
++	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
++	C_FLAGS="$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS) -I. -I../../include" \
++	LD_FLAGS="$(ANDROID_LD_FLAGS)" \
++	../../lib/cmem.a470MV
++	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module \
++	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN)
+ 
+ cmem_clean:
+ 	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module clean
+-	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface clean
++	$(MAKE) -C $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/interface \
++	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
++	C_FLAGS="$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS) -I. -I../../include" \
++	LD_FLAGS="$(ANDROID_LD_FLAGS)" \
++	clean
+ 
+ cmem_install:
+ 	install -d $(EXEC_DIR)/lib/modules/$(KERNEL_VERSION)/kernel/drivers/dsp
+@@ -254,7 +263,11 @@ cmem_install:
+ # target is defined.
+ #==============================================================================
+ sdma:
+-	$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module RULES_MAKE=$(DVSDK_INSTALL_DIR)/Rules.make
++	$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src \
++	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
++	UCTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
++	C_FLAGS="$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS) -I. -I../../include" \
++	LD_FLAGS="$(ANDROID_LD_FLAGS)"
+ 
+ sdma_clean:
+ 	$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module clean RULES_MAKE=$(DVSDK_INSTALL_DIR)/Rules.make
+@@ -270,13 +283,13 @@ sdma_install:
+ lpm:
+ 	$(MAKE) -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
+ 		LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
+-		MVTOOL_PREFIX=$(CSTOOL_PREFIX) \
++		MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
+ 		DSPLINK_REPO=$(LINK_INSTALL_DIR)
+ 
+ lpm_clean:
+ 	$(MAKE)  -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
+ 	LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
+-	MVTOOL_PREFIX=$(CSTOOL_PREFIX) \
++	MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
+ 	DSPLINK_REPO=$(LINK_INSTALL_DIR) clean
+ 
+ lpm_install:
+@@ -376,13 +389,15 @@ dmai:
+ 	XDAIS_INSTALL_DIR_$(PLATFORM)_al=$(XDAIS_INSTALL_DIR) \
+ 	LINUXLIBS_INSTALL_DIR_$(PLATFORM)_al=$(LINUXLIBS_INSTALL_DIR) \
+ 	LINUXKERNEL_INSTALL_DIR_$(PLATFORM)_al=$(LINUXKERNEL_INSTALL_DIR) \
+-	CROSS_COMPILE_$(PLATFORM)_al=$(CSTOOL_PREFIX) \
++	CROSS_COMPILE_$(PLATFORM)_al=$(ANDROID_TOOLCHAIN) \
+ 	XDC_INSTALL_DIR_$(PLATFORM)_al=$(XDC_INSTALL_DIR) \
+ 	LINK_INSTALL_DIR_$(PLATFORM)_al=$(LINK_INSTALL_DIR) \
+ 	C6ACCEL_INSTALL_DIR_$(PLATFORM)_al=$(C6ACCEL_INSTALL_DIR) \
+ 	LPM_INSTALL_DIR_$(PLATFORM)_al=$(LPM_INSTALL_DIR) \
+ 	C6ACCEL_INSTALL_DIR_$(PLATFORM)_al=$(C6ACCEL_INSTALL_DIR) \
+-	VERBOSE=false \
++	ANDROID_CFLAGS="$(BIONIC_LIBC_INCS) $(ANDROID_CC_FLAGS) -I$(ANDROID_ROOT_DIR)/external/alsa-lib/include -I$(ANDROID_ROOT_DIR)/frameworks/base/include -I$(LINUXKERNEL_INSTALL_DIR)/arch/arm/mach-omap2/include -D__deprecated=\"\"" \
++	ANDROID_LDFLAGS="$(ANDROID_LD_FLAGS) -L$(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/obj/STATIC_LIBRARIES/libasound_intermediates" \
++	VERBOSE=true \
+ 	all
+ 	
+ dmai_clean:
+@@ -396,6 +411,30 @@ dmai_install:
+ 	install
+ 
+ ###############################################################################
++# Rebuilding codec engine with the Android toolchain
++###############################################################################
++CE_XDCPATH = "$(BIOS_INSTALL_DIR)/packages;$(LINK_INSTALL_DIR);$(FC_INSTALL_DIR)/packages;$(XDAIS_INSTALL_DIR)/packages;$(BIOSUTILS_INSTALL_DIR)/packages;$(CMEM_INSTALL_DIR)/packages;$(LPM_INSTALL_DIR)/packages"
++
++CE_ENV = \
++	XDCPATH=$(CE_XDCPATH) \
++	XDCOPTIONS=v XDCARGS="prod" XDCBUILDCFG=$(CE_INSTALL_DIR)/config.bld \
++	CODEGEN_INSTALL_DIR=$(CODEGEN_INSTALL_DIR) \
++	ANDROID_CFLAGS="$(BIONIC_LIBC_INCS) $(ANDROID_CC_FLAGS)" \
++	ANDROID_LDFLAGS="$(ANDROID_LD_FLAGS)" \
++	ANDROID_TOOLCHAIN="$(ANDROID_TOOLCHAIN_PATH)" \
++	ANDROID_TOOLCHAIN_LONGNAME=$(ANDROID_TOOLCHAIN_LONGNAME) \
++
++ce:
++	$(CE_ENV) $(XDC_INSTALL_DIR)/xdc -PR $(CE_INSTALL_DIR)/packages/
++
++ce_examples:
++	$(CE_ENV) $(XDC_INSTALL_DIR)/xdc -PR $(CE_INSTALL_DIR)/examples/
++
++ce_clean:
++	$(CE_ENV) $(XDC_INSTALL_DIR)/xdc clean -PR $(CE_INSTALL_DIR)/packages/
++	$(CE_ENV) $(XDC_INSTALL_DIR)/xdc clean -PR $(CE_INSTALL_DIR)/examples/
++
++###############################################################################
+ # Build codec engine examples
+ ###############################################################################
+ ceexamples_apps:
+@@ -597,28 +636,40 @@ dsplink_arm_clean:
+ ifeq ($(FIND_DSPLINKCONFIG), $(LINK_INSTALL_DIR)/dsplink/config/BUILD/CURRENTCFG.MK)
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+ 	$(MAKE) -C $(LINK_INSTALL_DIR)/dsplink/gpp/src \
+-	CROSS_COMPILE=$(CSTOOL_PREFIX) \
+-	CC=$(CSTOOL_PREFIX)gcc \
+-	AR=$(CSTOOL_PREFIX)ar \
+-	LD=$(CSTOOL_PREFIX)ld \
+-	COMPILER=$(CSTOOL_PREFIX)gcc \
+-	ARCHIVER=$(CSTOOL_PREFIX)ar \
++	CROSS_COMPILE=$(ANDROID_TOOLCHAIN_PREFIX) \
++	CC=$(ANDROID_TOOLCHAIN)gcc \
++	COMPILER=$(ANDROID_TOOLCHAIN)gcc \
++	ARCHIVER=$(ANDROID_TOOLCHAIN)ar \
++	LINKER=$(ANDROID_TOOLCHAIN)gcc \
++	AR=$(ANDROID_TOOLCHAIN)ar \
++	LD=$(ANDROID_TOOLCHAIN)ld \
+ 	KERNEL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
++	BASE_TOOLCHAIN=$(ANDROID_TOOLCHAIN_PATH) \
+ 	BASE_BUILDOS=$(LINUXKERNEL_INSTALL_DIR) \
++	MAKE_OPTS='ARCH=arm CROSS_COMPILE=$(ANDROID_TOOLCHAIN)' \
++	USR_CC_FLAGS='$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS)' \
++	USR_LD_FLAGS='' \
++	EXE_LD_FLAGS='$(ANDROID_LD_FLAGS)' \
+ 	clean 
+ endif
+ 
+ dsplink_arm: dsplink_cfg
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+ 	$(MAKE) -C $(LINK_INSTALL_DIR)/dsplink/gpp/src \
+-	CROSS_COMPILE=$(CSTOOL_PREFIX) \
+-	CC=$(CSTOOL_PREFIX)gcc \
+-	COMPILER=$(CSTOOL_PREFIX)gcc \
+-	ARCHIVER=$(CSTOOL_PREFIX)ar \
+-	AR=$(CSTOOL_PREFIX)ar \
+-	LD=$(CSTOOL_PREFIX)ld \
++	CROSS_COMPILE=$(ANDROID_TOOLCHAIN_PREFIX) \
++	CC=$(ANDROID_TOOLCHAIN)gcc \
++	COMPILER=$(ANDROID_TOOLCHAIN)gcc \
++	ARCHIVER=$(ANDROID_TOOLCHAIN)ar \
++	LINKER=$(ANDROID_TOOLCHAIN)gcc \
++	AR=$(ANDROID_TOOLCHAIN)ar \
++	LD=$(ANDROID_TOOLCHAIN)ld \
+ 	KERNEL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
++	BASE_TOOLCHAIN=$(ANDROID_TOOLCHAIN_PATH) \
+ 	BASE_BUILDOS=$(LINUXKERNEL_INSTALL_DIR) \
++	MAKE_OPTS='ARCH=arm CROSS_COMPILE=$(ANDROID_TOOLCHAIN)' \
++	USR_CC_FLAGS='$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS)' \
++	USR_LD_FLAGS='' \
++	EXE_LD_FLAGS='$(ANDROID_LD_FLAGS)' \
+ 	all
+ 
+ dsplink_dsp_clean:
+@@ -641,17 +692,20 @@ dsplink_samples_clean:
+ ifeq ($(FIND_DSPLINKCONFIG), $(LINK_INSTALL_DIR)/dsplink/config/BUILD/CURRENTCFG.MK)
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+ 	$(MAKE)	-C $(LINK_INSTALL_DIR)/dsplink/gpp/src/samples \
+-	BASE_TOOLCHAIN=$(CSTOOL_DIR) \
+-	BASE_CGTOOLS=$(CSTOOL_DIR)/bin \
+-	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
+-	OSINC_TARGET=$(CSTOOL_DIR)/target/usr/include \
+-	CROSS_COMPILE=$(CSTOOL_PREFIX) \
+-	CC=$(CSTOOL_PREFIX)gcc \
+-	COMPILER=$(CSTOOL_PREFIX)gcc \
+-	ARCHIVER=$(CSTOOL_PREFIX)ar \
+-	AR=$(CSTOOL_PREFIX)ar \
+-	LD=$(CSTOOL_PREFIX)ld \
++	CROSS_COMPILE=$(ANDROID_TOOLCHAIN_PREFIX) \
++	CC=$(ANDROID_TOOLCHAIN)gcc \
++	COMPILER=$(ANDROID_TOOLCHAIN)gcc \
++	ARCHIVER=$(ANDROID_TOOLCHAIN)ar \
++	LINKER=$(ANDROID_TOOLCHAIN)gcc \
++	AR=$(ANDROID_TOOLCHAIN)ar \
++	LD=$(ANDROID_TOOLCHAIN)ld \
+ 	KERNEL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
++	BASE_TOOLCHAIN=$(ANDROID_TOOLCHAIN_PATH) \
++	BASE_BUILDOS=$(LINUXKERNEL_INSTALL_DIR) \
++	MAKE_OPTS='ARCH=arm CROSS_COMPILE=$(ANDROID_TOOLCHAIN)' \
++	USR_CC_FLAGS='$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS)' \
++	USR_LD_FLAGS='' \
++	EXE_LD_FLAGS='$(ANDROID_LD_FLAGS)' \
+ 	clean
+ 
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+@@ -665,17 +719,20 @@ endif
+ dsplink_samples:
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+ 	$(MAKE)	-C $(LINK_INSTALL_DIR)/dsplink/gpp/src/samples \
+-	BASE_TOOLCHAIN=$(CSTOOL_DIR) \
+-	BASE_CGTOOLS=$(CSTOOL_DIR)/bin \
+-	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
+-	OSINC_TARGET=$(CSTOOL_DIR)/target/usr/include \
+-	CROSS_COMPILE="$(CSTOOL_PREFIX)" \
+-	CC=$(CSTOOL_PREFIX)gcc \
+-	COMPILER=$(CSTOOL_PREFIX)gcc \
+-	ARCHIVER=$(CSTOOL_PREFIX)ar \
+-	AR=$(CSTOOL_PREFIX)ar \
+-	LD=$(CSTOOL_PREFIX)ld \
++	CROSS_COMPILE=$(ANDROID_TOOLCHAIN_PREFIX) \
++	CC=$(ANDROID_TOOLCHAIN)gcc \
++	COMPILER=$(ANDROID_TOOLCHAIN)gcc \
++	ARCHIVER=$(ANDROID_TOOLCHAIN)ar \
++	LINKER=$(ANDROID_TOOLCHAIN)gcc \
++	AR=$(ANDROID_TOOLCHAIN)ar \
++	LD=$(ANDROID_TOOLCHAIN)ld \
+ 	KERNEL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
++	BASE_TOOLCHAIN=$(ANDROID_TOOLCHAIN_PATH) \
++	BASE_BUILDOS=$(LINUXKERNEL_INSTALL_DIR) \
++	MAKE_OPTS='ARCH=arm CROSS_COMPILE=$(ANDROID_TOOLCHAIN)' \
++	USR_CC_FLAGS='$(ANDROID_CC_FLAGS) $(BIONIC_LIBC_INCS)' \
++	USR_LD_FLAGS='' \
++	EXE_LD_FLAGS='$(ANDROID_LD_FLAGS)' \
+ 	all
+ 
+ 	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
+@@ -731,7 +788,7 @@ c6accel:
+ 	SERVER_INSTALL_DIR="$(CODEC_INSTALL_DIR)" \
+ 	C6ACCEL_INSTALL_DIR="$(C6ACCEL_INSTALL_DIR)" \
+ 	CSTOOL_DIR="$(CSTOOL_DIR)" \
+-	CSTOOL_PREFIX="$(CSTOOL_PREFIX)" \
++	CSTOOL_PREFIX="$(ANDROID_TOOLCHAIN)" \
+ 	all
+ 
+ c6accel_clean:
+diff --git a/Rules.make b/Rules.make
+index 69c4748..7ba0e64 100755
+--- a/Rules.make
++++ b/Rules.make
+@@ -55,7 +55,7 @@ CODEGEN_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/cgt6x_6_1_14
+ PSP_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/psp
+ 
+ # The directory that points to your kernel source directory.
+-LINUXKERNEL_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/psp/linux-2.6.32-psp03.00.01.06
++LINUXKERNEL_INSTALL_DIR=$(ANDROID_ROOT_DIR)/kernel
+ KERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR)
+ 
+ # Where the local power manager is installed.
+-- 
+1.7.0.4
+

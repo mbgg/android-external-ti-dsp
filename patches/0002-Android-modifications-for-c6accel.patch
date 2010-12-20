@@ -4,17 +4,17 @@ Date: Thu, 9 Dec 2010 13:53:23 +0100
 Subject: [PATCH 2/5] Android modifications for c6accel
 
 ---
- c6accel_1_01_00_01/config.bld            |    1 +
- c6accel_1_01_00_01/soc/Makefile          |    2 +-
- c6accel_1_01_00_01/soc/app/Makefile      |    4 +++-
- c6accel_1_01_00_01/soc/app/timeObj.h     |    1 +
- c6accel_1_01_00_01/soc/c6accelw/Makefile |    4 +++-
+ c6accel_1_01_00_02/config.bld            |    1 +
+ c6accel_1_01_00_02/soc/Makefile          |    2 +-
+ c6accel_1_01_00_02/soc/app/Makefile      |    4 +++-
+ c6accel_1_01_00_02/soc/app/timeObj.h     |    1 +
+ c6accel_1_01_00_02/soc/c6accelw/Makefile |    4 +++-
  5 files changed, 9 insertions(+), 3 deletions(-)
 
-diff --git a/c6accel_1_01_00_01/config.bld b/c6accel_1_01_00_01/config.bld
+diff --git a/c6accel_1_01_00_02/config.bld b/c6accel_1_01_00_02/config.bld
 index 57ec08e..0819859 100755
---- a/c6accel_1_01_00_01/config.bld
-+++ b/c6accel_1_01_00_01/config.bld
+--- a/c6accel_1_01_00_02/config.bld
++++ b/c6accel_1_01_00_02/config.bld
 @@ -76,6 +76,7 @@ var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
  GCArmv5T.LONGNAME = longName;
  GCArmv5T.platform = java.lang.System.getenv("PLATFORM_XDC");
@@ -23,10 +23,10 @@ index 57ec08e..0819859 100755
  
  Build.targets = [
  ];
-diff --git a/c6accel_1_01_00_01/soc/Makefile b/c6accel_1_01_00_01/soc/Makefile
+diff --git a/c6accel_1_01_00_02/soc/Makefile b/c6accel_1_01_00_02/soc/Makefile
 index 098ea2c..73aad00 100755
---- a/c6accel_1_01_00_01/soc/Makefile
-+++ b/c6accel_1_01_00_01/soc/Makefile
+--- a/c6accel_1_01_00_02/soc/Makefile
++++ b/c6accel_1_01_00_02/soc/Makefile
 @@ -37,7 +37,7 @@ export XDCTARGETS
  
  .PHONY: c6accelw codec_packages server c6accel_app release_packages clean clean_packages
@@ -36,10 +36,10 @@ index 098ea2c..73aad00 100755
  
  release: release_packages
  
-diff --git a/c6accel_1_01_00_01/soc/app/Makefile b/c6accel_1_01_00_01/soc/app/Makefile
+diff --git a/c6accel_1_01_00_02/soc/app/Makefile b/c6accel_1_01_00_02/soc/app/Makefile
 index 2148757..c2c96a6 100755
---- a/c6accel_1_01_00_01/soc/app/Makefile
-+++ b/c6accel_1_01_00_01/soc/app/Makefile
+--- a/c6accel_1_01_00_02/soc/app/Makefile
++++ b/c6accel_1_01_00_02/soc/app/Makefile
 @@ -52,6 +52,8 @@ export PLATFORM_XDC
  CONFIGURO = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
  CONFIG_BLD = ../../config.bld
@@ -58,10 +58,10 @@ index 2148757..c2c96a6 100755
  C6ACCEL_LIB += ../c6accelw/lib/c6accelw_$(PLATFORM).a470MV
  
  COMPILE.c = $(VERBOSE) $(CSTOOL_PREFIX)gcc $(CPP_FLAGS) $(C_FLAGS) $(CPP_FLAGS) -c
-diff --git a/c6accel_1_01_00_01/soc/app/timeObj.h b/c6accel_1_01_00_01/soc/app/timeObj.h
+diff --git a/c6accel_1_01_00_02/soc/app/timeObj.h b/c6accel_1_01_00_02/soc/app/timeObj.h
 index 50e2d5f..a75455d 100755
---- a/c6accel_1_01_00_01/soc/app/timeObj.h
-+++ b/c6accel_1_01_00_01/soc/app/timeObj.h
+--- a/c6accel_1_01_00_02/soc/app/timeObj.h
++++ b/c6accel_1_01_00_02/soc/app/timeObj.h
 @@ -34,6 +34,7 @@
  #ifndef TIMEOBJ_H
  #define TIMEOBJ_H
@@ -70,10 +70,10 @@ index 50e2d5f..a75455d 100755
  
  // Define a structure to allow benchmarking using gettimeofday()
  typedef struct Time_Object {
-diff --git a/c6accel_1_01_00_01/soc/c6accelw/Makefile b/c6accel_1_01_00_01/soc/c6accelw/Makefile
+diff --git a/c6accel_1_01_00_02/soc/c6accelw/Makefile b/c6accel_1_01_00_02/soc/c6accelw/Makefile
 index cc58acf..67a0284 100755
---- a/c6accel_1_01_00_01/soc/c6accelw/Makefile
-+++ b/c6accel_1_01_00_01/soc/c6accelw/Makefile
+--- a/c6accel_1_01_00_02/soc/c6accelw/Makefile
++++ b/c6accel_1_01_00_02/soc/c6accelw/Makefile
 @@ -20,6 +20,8 @@ BUILD_TYPE=release
  
  CPP_FLAGS += -I../packages -I$(XDC_INSTALL_DIR)/packages -I$(CE_INSTALL_DIR)/packages -I$(XDAIS_INSTALL_DIR)/packages -Dxdc_target_name__=arm/GCArmv5T -Dxdc_target_types__=gnu/targets/std.h

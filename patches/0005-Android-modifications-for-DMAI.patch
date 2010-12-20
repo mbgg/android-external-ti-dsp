@@ -4,15 +4,15 @@ Date: Thu, 9 Dec 2010 14:05:48 +0100
 Subject: [PATCH 5/5] Android modifications for DMAI
 
 ---
- dmai_2_20_00_10/packages/config.bld                |    1 +
- dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile      |    4 ++--
+ dmai_2_20_00_14/packages/config.bld                |    1 +
+ dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile      |    4 ++--
  .../packages/ti/sdo/dmai/apps/Makefile.app         |    5 +++--
  3 files changed, 6 insertions(+), 4 deletions(-)
 
-diff --git a/dmai_2_20_00_10/packages/config.bld b/dmai_2_20_00_10/packages/config.bld
+diff --git a/dmai_2_20_00_14/packages/config.bld b/dmai_2_20_00_14/packages/config.bld
 index 8c2e96e..6e24fa4 100644
---- a/dmai_2_20_00_10/packages/config.bld
-+++ b/dmai_2_20_00_10/packages/config.bld
+--- a/dmai_2_20_00_14/packages/config.bld
++++ b/dmai_2_20_00_14/packages/config.bld
 @@ -72,6 +72,7 @@ var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
  GCArmv5T.LONGNAME = longName;
  GCArmv5T.platform = java.lang.System.getenv("PLATFORM_XDC");
@@ -21,11 +21,11 @@ index 8c2e96e..6e24fa4 100644
  
  Build.targets = [
  ];
-diff --git a/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile b/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile
+diff --git a/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile b/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile
 index 739cb4d..f92faff 100644
---- a/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile
-+++ b/dmai_2_20_00_10/packages/ti/sdo/dmai/Makefile
-@@ -103,10 +103,10 @@ XDCPATH	+= $(XDC_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(CODEC_INST
+--- a/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile
++++ b/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile
+@@ -107,10 +107,10 @@ XDCPATH	+= $(XDC_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(CODEC_INST
  
  CPP_FLAGS	+= -I$(XDC_INSTALL_DIR)/packages -I$(DMAI_INSTALL_DIR)/packages -I$(CE_INSTALL_DIR)/packages -I$(FC_INSTALL_DIR)/packages -I$(XDAIS_INSTALL_DIR)/packages -I$(CODEC_INSTALL_DIR)/packages -DDmai_Device_$(PLATFORM_DEVICE)
  
@@ -38,10 +38,10 @@ index 739cb4d..f92faff 100644
  C64P_C_FLAGS	+= $(C_FLAGS)
  
  GNU_AR_FLAGS	+= $(AR_FLAGS)
-diff --git a/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app b/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app
+diff --git a/dmai_2_20_00_14/packages/ti/sdo/dmai/apps/Makefile.app b/dmai_2_20_00_14/packages/ti/sdo/dmai/apps/Makefile.app
 index 0563a34..94c4320 100644
---- a/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app
-+++ b/dmai_2_20_00_10/packages/ti/sdo/dmai/apps/Makefile.app
+--- a/dmai_2_20_00_14/packages/ti/sdo/dmai/apps/Makefile.app
++++ b/dmai_2_20_00_14/packages/ti/sdo/dmai/apps/Makefile.app
 @@ -115,13 +115,14 @@ CONFIGURO_BIOS	= $(PRE) $(XDC_INSTALL_DIR)/xs xdc.tools.configuro -c $(CODEGEN_I
  
  CPP_FLAGS	+= $(PLATFORM_CPPFLAGS)

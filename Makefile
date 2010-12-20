@@ -13,7 +13,11 @@
 # limitations under the License.
 
 ANDROID_ROOT_DIR := $(PWD)
-DVSDK_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/ti-dvsdk_dm3730-evm_4_00_00_22
+ifeq ($(OMAPES), 5.x)
+DVSDK_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/ti-dvsdk_dm3730-evm_4_01_00_09
+else
+DVSDK_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/ti-dvsdk_omap3530-evm_4_01_00_09
+endif
 DVSDK_TARGET_DIR:=$(ANDROID_ROOT_DIR)/out/target/product/$(TARGET_PRODUCT)/system/ti-dsp
 
 include $(DVSDK_INSTALL_DIR)/Rules.make

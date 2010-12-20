@@ -15,7 +15,9 @@
 
 set pwd [exec pwd]
 set timeout -1
-spawn ./dvsdk_dm3730-evm_4_00_00_22_setuplinux --mode console --forcehost
+set dvsdk_dir ti-[lindex $argv 0]
+set dvsdk_package [lindex $argv 0]_setuplinux
+spawn ./$dvsdk_package --mode console --forcehost
 expect -re ".*This will install dvsdk on your computer.*"
 send -- "y\r"
 expect -re ".*\].*"
@@ -25,5 +27,5 @@ send -- " "
 expect -re ".*Enter y if you accept ALL license agreements, else enter n.*"
 send -- "y\r"
 expect -re ".*Where do you want to install dvsdk?.*"
-send -- "$pwd/ti-dvsdk_dm3730-evm_4_00_00_22\r"
+send -- "$pwd/$dvsdk_dir\r"
 expect eof

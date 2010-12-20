@@ -23,9 +23,16 @@ check_status() {
 
 root_dir=`pwd`
 install_dir=$root_dir/external/ti-dsp
-dvsdk_version=dvsdk_dm3730-evm_4_00_00_22
+dm37x_dvsdk_version=dvsdk_dm3730-evm_4_01_00_09
+omap35x_dvsdk_version=dvsdk_omap3530-evm_4_01_00_09
 
-cd "$install_dir"
+cd "$install_dir" || exit 1
+
+if [ "$OMAPES" == "5.x" ]; then
+    dvsdk_version=$dm37x_dvsdk_version
+else
+    dvsdk_version=$omap35x_dvsdk_version
+fi
 
 # Install the DVSDK using the download DVSDK installer
 if ! [ -d "ti-$dvsdk_version" ]; then
@@ -46,13 +53,19 @@ if ! [ -d "ti-$dvsdk_version" ]; then
     fi
 
     echo "Installing DVSDK..."
-    ./install_dvsdk4.exp
+    ./install_dvsdk4.exp $dvsdk_version
 
     echo "Patching DVSDK components for Android..."
     cd $install_dir/ti-$dvsdk_version
     check_status
 
     for file in $install_dir/patches/*; do
+        if [ $(basename $file) == "0001-Android-modifications-to-DVSDK-build-system-dm37x.patch" -a "$OMAPES" != "5.x" ]; then
+            continue
+        fi
+        if [ $(basename $file) == "0001-Android-modifications-to-DVSDK-build-system-omap35x.patch" -a "$OMAPES" == "5.x" ]; then
+            continue
+        fi
         patch -p1 < $file
         check_status
     done
