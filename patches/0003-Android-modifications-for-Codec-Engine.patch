@@ -45,7 +45,7 @@ index 0000000..e75674c
 +
 +GCArmv5T.lnkOpts.suffix = GCArmv5T.lnkOpts.suffix.replace("-lstdc++","");
 +
-+GCArmv5T.lnkOpts.suffix += java.lang.System.getenv("ANDROID_LDFLAGS");
++GCArmv5T.lnkOpts.suffix += " " + java.lang.System.getenv("ANDROID_LDFLAGS");
 +
 +GCArmv5T.noStdLinkScript = true;
 +
