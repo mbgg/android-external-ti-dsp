@@ -127,6 +127,9 @@ dvsdk_clean:
 	make -C $(DVSDK_INSTALL_DIR) dmai_clean
 	make -C $(DVSDK_INSTALL_DIR) c6accel_clean
 
+distclean:
+	rm -rf $(DVSDK_INSTALL_DIR) already_clean
+
 # Install resulting binaries in the Android filesystem
 
 install:
