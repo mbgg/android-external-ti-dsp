@@ -7,23 +7,20 @@ Subject: [PATCH 4/5] Android modifications for DSPLink
  .../dsplink/gpp/src/api/Linux/_notify.c            |    2 ++
  1 files changed, 2 insertions(+), 0 deletions(-)
 
-diff --git a/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c b/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c
-index 269e900..47a3f4b 100644
---- a/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c
-+++ b/dsplink_1_65_00_02/dsplink/gpp/src/api/Linux/_notify.c
-@@ -320,10 +320,12 @@ NOTIFY_eventWorker (IN     void * arg)
-         pthread_exit (NULL) ;
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/dsplink_1_65_01_05_eng/dsplink/gpp/src/api/Linux/_notify.c
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/dsplink_1_65_01_05_eng/dsplink/gpp/src/api/Linux/_notify.c	2011-12-22 23:53:11.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/dsplink_1_65_01_05_eng/dsplink/gpp/src/api/Linux/_notify.c	2012-02-04 14:11:59.758400113 +0530
+@@ -320,10 +320,12 @@
+         return;
      }
  
 +#ifndef _ANDROID_
      if (pthread_sigmask (SIG_BLOCK, &blockSet, NULL) != 0) {
          perror ("Event worker thread error in setting sigmask") ;
-         pthread_exit (NULL) ;
+         return;
      }
 +#endif
  
      drvHandle = open (LINK_DRIVER, O_RDWR | O_SYNC) ;
      if (drvHandle < 0) {
--- 
-1.7.0.4
-

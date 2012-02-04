@@ -8,11 +8,11 @@ Subject: [PATCH] Android modifications to DVSDK build system
  Rules.make |    2 +-
  2 files changed, 99 insertions(+), 42 deletions(-)
 
-diff --git a/Makefile b/Makefile
-index 31b1129..561f12a 100755
---- a/Makefile
-+++ b/Makefile
-@@ -238,12 +238,21 @@ psp_examples_install:
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/Makefile
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/Makefile	2011-12-23 00:30:00.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/Makefile	2012-02-04 13:36:39.350325316 +0530
+@@ -240,12 +240,21 @@
  # is defined.
  #==============================================================================
  cmem:
@@ -37,7 +37,7 @@ index 31b1129..561f12a 100755
  
  cmem_install:
  	install -d $(EXEC_DIR)/lib/modules/$(KERNEL_VERSION)/kernel/drivers/dsp
-@@ -254,7 +263,11 @@ cmem_install:
+@@ -256,7 +265,11 @@
  # target is defined.
  #==============================================================================
  sdma:
@@ -50,7 +50,7 @@ index 31b1129..561f12a 100755
  
  sdma_clean:
  	$(MAKE) -C $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module clean RULES_MAKE=$(DVSDK_INSTALL_DIR)/Rules.make
-@@ -270,13 +283,13 @@ sdma_install:
+@@ -272,13 +285,13 @@
  lpm:
  	$(MAKE) -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
  		LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
@@ -66,7 +66,7 @@ index 31b1129..561f12a 100755
  	DSPLINK_REPO=$(LINK_INSTALL_DIR) clean
  
  lpm_install:
-@@ -376,13 +389,15 @@ dmai:
+@@ -378,13 +391,15 @@
  	XDAIS_INSTALL_DIR_$(PLATFORM)_al=$(XDAIS_INSTALL_DIR) \
  	LINUXLIBS_INSTALL_DIR_$(PLATFORM)_al=$(LINUXLIBS_INSTALL_DIR) \
  	LINUXKERNEL_INSTALL_DIR_$(PLATFORM)_al=$(LINUXKERNEL_INSTALL_DIR) \
@@ -84,8 +84,8 @@ index 31b1129..561f12a 100755
  	all
  	
  dmai_clean:
-@@ -396,6 +411,30 @@ dmai_install:
- 	install
+@@ -399,6 +414,30 @@
+	cd $(EXEC_DIR)/usr/share/ti/ti-dmai-apps && rm -rf cs.x64P && ln -s ../ti-codecs-server/cs.x64P cs.x64P
  
  ###############################################################################
 +# Rebuilding codec engine with the Android toolchain
@@ -115,7 +115,7 @@ index 31b1129..561f12a 100755
  # Build codec engine examples
  ###############################################################################
  ceexamples_apps:
-@@ -597,28 +636,40 @@ dsplink_arm_clean:
+@@ -600,28 +639,40 @@
  ifeq ($(FIND_DSPLINKCONFIG), $(LINK_INSTALL_DIR)/dsplink/config/BUILD/CURRENTCFG.MK)
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
  	$(MAKE) -C $(LINK_INSTALL_DIR)/dsplink/gpp/src \
@@ -168,13 +168,13 @@ index 31b1129..561f12a 100755
  	all
  
  dsplink_dsp_clean:
-@@ -641,17 +692,20 @@ dsplink_samples_clean:
+@@ -644,17 +695,20 @@
  ifeq ($(FIND_DSPLINKCONFIG), $(LINK_INSTALL_DIR)/dsplink/config/BUILD/CURRENTCFG.MK)
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
  	$(MAKE)	-C $(LINK_INSTALL_DIR)/dsplink/gpp/src/samples \
 -	BASE_TOOLCHAIN=$(CSTOOL_DIR) \
 -	BASE_CGTOOLS=$(CSTOOL_DIR)/bin \
--	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
+-	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-arago-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
 -	OSINC_TARGET=$(CSTOOL_DIR)/target/usr/include \
 -	CROSS_COMPILE=$(CSTOOL_PREFIX) \
 -	CC=$(CSTOOL_PREFIX)gcc \
@@ -199,13 +199,13 @@ index 31b1129..561f12a 100755
  	clean
  
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
-@@ -665,17 +719,20 @@ endif
+@@ -668,17 +722,20 @@
  dsplink_samples:
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
  	$(MAKE)	-C $(LINK_INSTALL_DIR)/dsplink/gpp/src/samples \
 -	BASE_TOOLCHAIN=$(CSTOOL_DIR) \
 -	BASE_CGTOOLS=$(CSTOOL_DIR)/bin \
--	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-none-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
+-	OSINC_PLATFORM=$(CSTOOL_PREFIX)/lib/gcc/arm-arago-linux-gnueabi/$($(CSTOOL_PREFIX) --dumversion)/include \
 -	OSINC_TARGET=$(CSTOOL_DIR)/target/usr/include \
 -	CROSS_COMPILE="$(CSTOOL_PREFIX)" \
 -	CC=$(CSTOOL_PREFIX)gcc \
@@ -230,7 +230,7 @@ index 31b1129..561f12a 100755
  	all
  
  	DSPLINK=$(LINK_INSTALL_DIR)/dsplink \
-@@ -731,7 +788,7 @@ c6accel:
+@@ -734,7 +791,7 @@
  	SERVER_INSTALL_DIR="$(CODEC_INSTALL_DIR)" \
  	C6ACCEL_INSTALL_DIR="$(C6ACCEL_INSTALL_DIR)" \
  	CSTOOL_DIR="$(CSTOOL_DIR)" \
@@ -239,19 +239,16 @@ index 31b1129..561f12a 100755
  	all
  
  c6accel_clean:
-diff --git a/Rules.make b/Rules.make
-index 69c4748..7ba0e64 100755
---- a/Rules.make
-+++ b/Rules.make
-@@ -55,7 +55,7 @@ CODEGEN_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/cgt6x_6_1_14
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/Rules.make
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/Rules.make	2012-02-03 18:23:47.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/Rules.make	2012-02-04 13:36:39.350325316 +0530
+@@ -55,7 +55,7 @@
  PSP_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/psp
  
  # The directory that points to your kernel source directory.
--LINUXKERNEL_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/psp/linux-2.6.32-psp03.00.01.06
+-LINUXKERNEL_INSTALL_DIR=$(DVSDK_INSTALL_DIR)/psp/linux-2.6.37-psp04.02.00.07.sdk
 +LINUXKERNEL_INSTALL_DIR=$(ANDROID_ROOT_DIR)/kernel
  KERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR)
  
  # Where the local power manager is installed.
--- 
-1.7.0.4
-

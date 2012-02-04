@@ -4,30 +4,30 @@ Date: Thu, 9 Dec 2010 13:53:23 +0100
 Subject: [PATCH 2/5] Android modifications for c6accel
 
 ---
- c6accel_1_01_00_02/config.bld            |    1 +
- c6accel_1_01_00_02/soc/Makefile          |    2 +-
- c6accel_1_01_00_02/soc/app/Makefile      |    4 +++-
- c6accel_1_01_00_02/soc/app/timeObj.h     |    1 +
- c6accel_1_01_00_02/soc/c6accelw/Makefile |    4 +++-
+ c6accel_1_01_00_07/config.bld            |    1 +
+ c6accel_1_01_00_07/soc/Makefile          |    2 +-
+ c6accel_1_01_00_07/soc/app/Makefile      |    4 +++-
+ c6accel_1_01_00_07/soc/app/timeObj.h     |    1 +
+ c6accel_1_01_00_07/soc/c6accelw/Makefile |    4 +++-
  5 files changed, 9 insertions(+), 3 deletions(-)
 
-diff --git a/c6accel_1_01_00_02/config.bld b/c6accel_1_01_00_02/config.bld
-index 57ec08e..0819859 100755
---- a/c6accel_1_01_00_02/config.bld
-+++ b/c6accel_1_01_00_02/config.bld
-@@ -76,6 +76,7 @@ var GCArmv5T = xdc.useModule('gnu.targets.arm.GCArmv5T');
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/config.bld
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/c6accel_1_01_00_07/config.bld	2011-12-22 23:53:19.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/config.bld	2012-02-04 13:59:34.794373835 +0530
+@@ -76,6 +76,7 @@
  GCArmv5T.LONGNAME = longName;
  GCArmv5T.platform = java.lang.System.getenv("PLATFORM_XDC");
  GCArmv5T.rootDir = tooldir;
 +GCArmv5T.ccOpts.prefix += " -Wall -fno-strict-aliasing " + java.lang.System.getenv("ANDROID_CFLAGS");
  
- Build.targets = [
- ];
-diff --git a/c6accel_1_01_00_02/soc/Makefile b/c6accel_1_01_00_02/soc/Makefile
-index 098ea2c..73aad00 100755
---- a/c6accel_1_01_00_02/soc/Makefile
-+++ b/c6accel_1_01_00_02/soc/Makefile
-@@ -37,7 +37,7 @@ export XDCTARGETS
+ var GCArmv7A = xdc.useModule('gnu.targets.arm.GCArmv7A');
+ GCArmv7A.LONGNAME = longName;
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/Makefile
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/c6accel_1_01_00_07/soc/Makefile	2011-12-22 23:53:19.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/Makefile	2012-02-04 14:01:12.698377288 +0530
+@@ -37,7 +37,7 @@
  
  .PHONY: c6accelw codec_packages server c6accel_app release_packages clean clean_packages
  
@@ -36,11 +36,11 @@ index 098ea2c..73aad00 100755
  
  release: release_packages
  
-diff --git a/c6accel_1_01_00_02/soc/app/Makefile b/c6accel_1_01_00_02/soc/app/Makefile
-index 2148757..c2c96a6 100755
---- a/c6accel_1_01_00_02/soc/app/Makefile
-+++ b/c6accel_1_01_00_02/soc/app/Makefile
-@@ -52,6 +52,8 @@ export PLATFORM_XDC
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/app/Makefile
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/c6accel_1_01_00_07/soc/app/Makefile	2011-12-22 23:53:20.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/app/Makefile	2012-02-04 14:02:53.178380832 +0530
+@@ -52,6 +52,8 @@
  CONFIGURO = $(XDC_INSTALL_DIR)/xs xdc.tools.configuro
  CONFIG_BLD = ../../config.bld
  
@@ -49,7 +49,7 @@ index 2148757..c2c96a6 100755
  ifeq ($(BUILD_TYPE), release)
  ifeq ($(ARM_ISA),armv7-a)
      C_FLAGS	+= -O3 -march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -mfloat-abi=softfp
-@@ -72,7 +74,7 @@ ifeq ($(PLATFORM),omapl138)
+@@ -72,7 +74,7 @@
      C_FLAGS	+= -DPLATFORM=138
  endif
  
@@ -58,10 +58,10 @@ index 2148757..c2c96a6 100755
  C6ACCEL_LIB += ../c6accelw/lib/c6accelw_$(PLATFORM).a470MV
  
  COMPILE.c = $(VERBOSE) $(CSTOOL_PREFIX)gcc $(CPP_FLAGS) $(C_FLAGS) $(CPP_FLAGS) -c
-diff --git a/c6accel_1_01_00_02/soc/app/timeObj.h b/c6accel_1_01_00_02/soc/app/timeObj.h
-index 50e2d5f..a75455d 100755
---- a/c6accel_1_01_00_02/soc/app/timeObj.h
-+++ b/c6accel_1_01_00_02/soc/app/timeObj.h
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/app/timeObj.h
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/c6accel_1_01_00_07/soc/app/timeObj.h	2011-12-22 23:53:20.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/app/timeObj.h	2012-02-04 14:03:20.010381779 +0530
 @@ -34,6 +34,7 @@
  #ifndef TIMEOBJ_H
  #define TIMEOBJ_H
@@ -70,11 +70,11 @@ index 50e2d5f..a75455d 100755
  
  // Define a structure to allow benchmarking using gettimeofday()
  typedef struct Time_Object {
-diff --git a/c6accel_1_01_00_02/soc/c6accelw/Makefile b/c6accel_1_01_00_02/soc/c6accelw/Makefile
-index cc58acf..67a0284 100755
---- a/c6accel_1_01_00_02/soc/c6accelw/Makefile
-+++ b/c6accel_1_01_00_02/soc/c6accelw/Makefile
-@@ -20,6 +20,8 @@ BUILD_TYPE=release
+Index: ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/c6accelw/Makefile
+===================================================================
+--- ti-dvsdk_dm3730-evm_04_03_00_06.orig.orig/c6accel_1_01_00_07/soc/c6accelw/Makefile	2011-12-22 23:53:19.000000000 +0530
++++ ti-dvsdk_dm3730-evm_04_03_00_06.orig/c6accel_1_01_00_07/soc/c6accelw/Makefile	2012-02-04 14:04:30.138384254 +0530
+@@ -20,6 +20,8 @@
  
  CPP_FLAGS += -I../packages -I$(XDC_INSTALL_DIR)/packages -I$(CE_INSTALL_DIR)/packages -I$(XDAIS_INSTALL_DIR)/packages -Dxdc_target_name__=arm/GCArmv5T -Dxdc_target_types__=gnu/targets/std.h
  
@@ -83,7 +83,7 @@ index cc58acf..67a0284 100755
  ifeq ($(BUILD_TYPE), release)
  ifeq ($(ARM_ISA),armv7-a)
      C_FLAGS	+= -O3 -march=armv7-a -mtune=cortex-a8 -mfpu=neon -ftree-vectorize -mfloat-abi=softfp
-@@ -33,7 +35,7 @@ else
+@@ -33,7 +35,7 @@
      C_FLAGS	+= -Wall -g
  endif
  
@@ -92,6 +92,3 @@ index cc58acf..67a0284 100755
  AR_FLAGS += 
  
  COMPILE.c = $(VERBOSE) $(CSTOOL_PREFIX)gcc $(CPP_FLAGS) $(C_FLAGS) -c
--- 
-1.7.0.4
-

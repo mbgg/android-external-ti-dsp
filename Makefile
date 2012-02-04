@@ -14,7 +14,7 @@
 
 ANDROID_ROOT_DIR := $(PWD)
 ifeq ($(OMAPES), 5.x)
-DVSDK_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/ti-dvsdk_dm3730-evm_4_01_00_09
+DVSDK_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/ti-dvsdk_dm3730-evm_04_03_00_06
 else
 DVSDK_INSTALL_DIR := $(ANDROID_ROOT_DIR)/external/ti-dsp/ti-dvsdk_omap3530-evm_4_01_00_09
 endif

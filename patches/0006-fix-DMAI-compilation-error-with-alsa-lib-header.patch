@@ -4,13 +4,13 @@ Date: Thu, 10 Feb 2011 12:13:36 -0600
 Subject: [PATCH] fix DMAI compilation error with alsa-lib header
 
 ---
- dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile  |    2 +-
+ dmai_2_20_00_15/packages/ti/sdo/dmai/Makefile  |    2 +-
  1 files changed, 1 insertions(+), 1 deletions(-)
 
-diff --git a/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile b/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile
+diff --git a/dmai_2_20_00_15/packages/ti/sdo/dmai/Makefile b/dmai_2_20_00_15/packages/ti/sdo/dmai/Makefile
 index 77c67b3..65010f1 100644
---- a/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile
-+++ b/dmai_2_20_00_14/packages/ti/sdo/dmai/Makefile
+--- a/dmai_2_20_00_15/packages/ti/sdo/dmai/Makefile
++++ b/dmai_2_20_00_15/packages/ti/sdo/dmai/Makefile
 @@ -105,7 +105,7 @@ endif
  
  XDCPATH	+= $(XDC_INSTALL_DIR)/packages;$(DMAI_INSTALL_DIR)/packages;$(CODEC_INSTALL_DIR)/packages

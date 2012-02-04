@@ -4,18 +4,18 @@ Date: Thu, 9 Dec 2010 14:00:04 +0100
 Subject: [PATCH 3/5] Android modifications for Codec Engine
 
 ---
- codec-engine_2_26_01_09/config.bld                 |   46 ++++++++++++++++++++
+ codec-engine_2_26_02_11/config.bld                 |   46 ++++++++++++++++++++
  .../packages/ti/sdo/ce/ipc/dsplink/package.bld     |   17 +++++--
  .../ti/sdo/ce/osal/linux/GT_config_posix.c         |    2 +
  .../packages/ti/sdo/ce/osal/linux/Thread_posix.c   |    4 ++
  4 files changed, 64 insertions(+), 5 deletions(-)
- create mode 100644 codec-engine_2_26_01_09/config.bld
+ create mode 100644 codec-engine_2_26_02_11/config.bld
 
-diff --git a/codec-engine_2_26_01_09/config.bld b/codec-engine_2_26_01_09/config.bld
+diff --git a/codec-engine_2_26_02_11/config.bld b/codec-engine_2_26_02_11/config.bld
 new file mode 100644
 index 0000000..e75674c
 --- /dev/null
-+++ b/codec-engine_2_26_01_09/config.bld
++++ b/codec-engine_2_26_02_11/config.bld
 @@ -0,0 +1,46 @@
 +/* enable any interesting diagnostics for the TI toolchain */
 +var remarks = " -pden -pds=195 ";
@@ -63,10 +63,10 @@ index 0000000..e75674c
 + * different devices.
 + */
 +Pkg.libTemplate = "ti/sdo/ce/utils/libvers.xdt";
-diff --git a/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld b/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld
+diff --git a/codec-engine_2_26_02_11/packages/ti/sdo/ce/ipc/dsplink/package.bld b/codec-engine_2_26_02_11/packages/ti/sdo/ce/ipc/dsplink/package.bld
 index 16b054e..c9205ff 100644
---- a/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld
-+++ b/codec-engine_2_26_01_09/packages/ti/sdo/ce/ipc/dsplink/package.bld
+--- a/codec-engine_2_26_02_11/packages/ti/sdo/ce/ipc/dsplink/package.bld
++++ b/codec-engine_2_26_02_11/packages/ti/sdo/ce/ipc/dsplink/package.bld
 @@ -78,6 +78,7 @@ for (var i = 0; i < Build.targets.length; i++) {
  
      if ((":"+targ.getISAChain().join(":")+":").match(/:v5T:|:v6:/i)) {
@@ -144,10 +144,10 @@ index 16b054e..c9205ff 100644
      }
      else {
          if ((":"+targ.getISAChain().join(":")+":").match(/:v4T:/i)) {
-diff --git a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
+diff --git a/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/GT_config_posix.c b/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
 index c901228..bc2b1f0 100644
---- a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
-+++ b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
+--- a/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
++++ b/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/GT_config_posix.c
 @@ -129,7 +129,9 @@ Int GTConfig_posixInit(Void)
          /* initialize mutex */
          pthread_mutexattr_init(&mattrs);
@@ -158,10 +158,10 @@ index c901228..bc2b1f0 100644
          pthread_mutex_init(&mutex,  &mattrs);
  
          /* call Global_atexit() to schedule our cleanup. Global module
-diff --git a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c
+diff --git a/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/Thread_posix.c b/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/Thread_posix.c
 index e3e0444..a28a532 100644
---- a/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c
-+++ b/codec-engine_2_26_01_09/packages/ti/sdo/ce/osal/linux/Thread_posix.c
+--- a/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/Thread_posix.c
++++ b/codec-engine_2_26_02_11/packages/ti/sdo/ce/osal/linux/Thread_posix.c
 @@ -159,7 +159,9 @@ Void Thread_delete(Thread_Handle task)
              if (cancel) {
                  int result;

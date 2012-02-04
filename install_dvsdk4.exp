@@ -19,26 +19,8 @@ set dvsdk_dir ti-[lindex $argv 0]
 set dvsdk_package [lindex $argv 0]_setuplinux
 spawn ./$dvsdk_package --mode console --forcehost
 expect {
-	-re ".*This\\s+will\\s+install\\s+dvsdk\\s+on\\s+your\\s+computer.*" {send -- "y\r"}
-	-re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " "; exp_continue}
-}
-expect {
-	-re ".*\].*" {send -- "$pwd/fake-toolchain/\r"}
-	-re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " "; exp_continue}
-}
-expect {
-	-re ".*Press Space to Continue.*" {send -- " "}
-	-re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " "; exp_continue}
-}
-expect {
-	-re ".*Enter\\s+y\\s+if\\s+you\\s+accept\\s+ALL\\s+license\\s+agreements,\\s+else\\s+enter\\s+n.*" {send -- "y\r"}
-	-re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " "; exp_continue}
-}
-expect {
-	-re ".*Where\\s+do\\s+you\\s+want\\s+to\\s+install\\s+dvsdk?.*" {send -- "$pwd/$dvsdk_dir\r"}
-	-re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " "; exp_continue}
-}
-expect {
-        -re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " "; exp_continue}
-	eof
+	-re ".*This\\s+will\\s+install\\s+dvsdk\\s+on\\s+your\\s+computer.*" {send -- "y\r"; exp_continue}
+	-re ".*\\s+Press.*==============================" {send " "; exp_continue}
+	-re ".*Enter.*\].*" {send -- "y\r"; exp_continue}
+	-re ".*Where\\s+do\\s+you\\s+want\\s+to\\s+install\\s+dvsdk?.*" {send -- "$pwd/$dvsdk_dir\r"; exp_continue}
 }

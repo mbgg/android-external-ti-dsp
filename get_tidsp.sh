@@ -23,7 +23,7 @@ check_status() {
 
 root_dir=`pwd`
 install_dir=$root_dir/external/ti-dsp
-dm37x_dvsdk_version=dvsdk_dm3730-evm_4_01_00_09
+dm37x_dvsdk_version=dvsdk_dm3730-evm_04_03_00_06
 omap35x_dvsdk_version=dvsdk_omap3530-evm_4_01_00_09
 
 cd "$install_dir" || exit 1
@@ -70,7 +70,7 @@ if ! [ -d "ti-$dvsdk_version" ]; then
         check_status
     done
 
-    sed -i -e  "s~CSTOOL_DIR=.*$~CSTOOL_DIR=${TOOLS_DIR}~g" -e 's~CSTOOL_PREFIX=\$(CSTOOL_DIR)/bin/arm-none-linux-gnueabi-~CSTOOL_PREFIX=\$\(CSTOOL_DIR\)/bin/arm-eabi-~g' ./Rules.make
+    sed -i -e  "s~CSTOOL_DIR=.*$~CSTOOL_DIR=${TOOLS_DIR}~g" -e 's~CSTOOL_PREFIX=\$(CSTOOL_DIR)/bin/arm-arago-linux-gnueabi-~CSTOOL_PREFIX=\$\(CSTOOL_DIR\)/bin/arm-eabi-~g' ./Rules.make
     check_status
 fi
 
