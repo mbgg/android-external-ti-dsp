@@ -66,7 +66,7 @@ if ! [ -d "ti-$dvsdk_version" ]; then
         if [ $(basename $file) == "0001-Android-modifications-to-DVSDK-build-system-omap35x.patch" -a "$OMAPES" == "5.x" ]; then
             continue
         fi
-        patch -p1 < $file
+        patch --ignore-whitespace -p1 < $file
         check_status
     done
 
