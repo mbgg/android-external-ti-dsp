@@ -23,4 +23,5 @@ expect {
 	-re ".*\\s+Press.*==============================" {send " "; exp_continue}
 	-re ".*Enter.*\].*" {send -- "y\r"; exp_continue}
 	-re ".*Where\\s+do\\s+you\\s+want\\s+to\\s+install\\s+dvsdk?.*" {send -- "$pwd/$dvsdk_dir\r"; exp_continue}
+	-re "--\\s+Press\\s+space\\s+to\\s+continue\\s+or\\s+'q'\\s+to\\s+quit\\s+--" {send " ";exp_continue}
 }
