@@ -103,7 +103,6 @@ all:	dvsdk  install
 
 clean:	dvsdk_clean 
 
-
 dvsdk:
 	make -C $(DVSDK_INSTALL_DIR) dsplink_arm
 	make -C $(DVSDK_INSTALL_DIR) dsplink_dsp
@@ -112,8 +111,8 @@ dvsdk:
 	make -C $(DVSDK_INSTALL_DIR) lpm
 	make -C $(DVSDK_INSTALL_DIR) cmem
 	make -C $(DVSDK_INSTALL_DIR) sdma
-#	make -C $(DVSDK_INSTALL_DIR) ce
-##	make -C $(DVSDK_INSTALL_DIR) ce_examples
+	make -C $(DVSDK_INSTALL_DIR) ce
+#	make -C $(DVSDK_INSTALL_DIR) ce_examples
 	make -C $(DVSDK_INSTALL_DIR) codecs
 	make -C $(DVSDK_INSTALL_DIR) dmai
 	make -C $(DVSDK_INSTALL_DIR) c6accel
@@ -123,7 +122,7 @@ dvsdk_clean:
 	make -C $(DVSDK_INSTALL_DIR) lpm_clean
 	make -C $(DVSDK_INSTALL_DIR) cmem_clean
 	make -C $(DVSDK_INSTALL_DIR) sdma_clean
-#	make -C $(DVSDK_INSTALL_DIR) ce_clean
+	make -C $(DVSDK_INSTALL_DIR) ce_clean
 	make -C $(DVSDK_INSTALL_DIR) codecs_clean
 	make -C $(DVSDK_INSTALL_DIR) dmai_clean
 	make -C $(DVSDK_INSTALL_DIR) c6accel_clean
