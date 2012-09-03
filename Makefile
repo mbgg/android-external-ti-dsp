@@ -109,8 +109,8 @@ dvsdk:
 	make -C $(DVSDK_INSTALL_DIR) dsplink_gpp_genpackage
 	make -C $(DVSDK_INSTALL_DIR) dsplink_dsp_genpackage
 	make -C $(DVSDK_INSTALL_DIR) lpm
-	make -C $(DVSDK_INSTALL_DIR) cmem
-	make -C $(DVSDK_INSTALL_DIR) sdma
+	make -C $(DVSDK_INSTALL_DIR) CFLAGS_MODULE=-fno-pic cmem
+	make -C $(DVSDK_INSTALL_DIR) CFLAGS_MODULE=-fno-pic sdma
 	make -C $(DVSDK_INSTALL_DIR) ce
 #	make -C $(DVSDK_INSTALL_DIR) ce_examples
 	make -C $(DVSDK_INSTALL_DIR) codecs
