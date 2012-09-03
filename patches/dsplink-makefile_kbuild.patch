@@ -1,0 +1,10 @@
+--- ti-dvsdk_dm3730-evm_04_03_00_06/dsplink_1_65_01_05_eng/dsplink/gpp/src/Makefile_kbuild	2011-12-22 19:23:11.000000000 +0100
++++ /home/matthias/src/android-dsp-ics/external/ti-dsp/ti-dvsdk_dm3730-evm_04_03_00_06/dsplink_1_65_01_05_eng/dsplink/gpp/src/Makefile_kbuild	2012-08-27 15:10:34.883687231 +0200
+@@ -90,6 +90,7 @@ EXTRA_CFLAGS += $(addprefix -D, $(TI_DSP
+ EXTRA_CFLAGS += $(addprefix -I, $(TI_DSPLINK_GPP_INC_PATH))
+ EXTRA_CFLAGS += -DEXPORT_SYMTAB -DTRACE_KERNEL
+ EXTRA_CFLAGS += $(PROFILE_FLAGS)
++EXTRA_CFLAGS += -fno-pic
+ 
+ ifeq ("$(PROFILE)", "DEBUG")
+     EXTRA_CFLAGS += -DDDSP_DEBUG

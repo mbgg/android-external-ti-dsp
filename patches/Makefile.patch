@@ -1,0 +1,18 @@
+--- ti-dvsdk_dm3730-evm_04_03_00_06/Makefile	2012-08-30 17:35:32.919218151 +0200
++++ /home/matthias/src/android-dsp-ics/external/ti-dsp/ti-dvsdk_dm3730-evm_04_03_00_06/Makefile	2012-08-27 15:11:48.715657499 +0200
+@@ -286,7 +286,8 @@ lpm:
+ 	$(MAKE) -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
+ 		LINUXKERNEL_INSTALL_DIR=$(LINUXKERNEL_INSTALL_DIR) \
+ 		MVTOOL_PREFIX=$(ANDROID_TOOLCHAIN) \
+-		DSPLINK_REPO=$(LINK_INSTALL_DIR)
++		DSPLINK_REPO=$(LINK_INSTALL_DIR) \
++		CFLAGS_MODULE=-fno-pic
+ 
+ lpm_clean:
+ 	$(MAKE)  -C $(LPM_INSTALL_DIR)/packages/ti/bios/power/modules/omap3530/lpm \
+@@ -986,4 +987,4 @@ loadmodule_install:
+ 	install -d $(EXEC_DIR)/etc/rc3.d/
+ 	install -m 0755 $(DVSDK_INSTALL_DIR)/etc/init.d/loadmodule-rc $(EXEC_DIR)/etc/init.d/
+ 	cd $(EXEC_DIR)/etc && rm -rf rc3.d/S99loadmodule-rc && ln -s ../init.d/loadmodule-rc rc3.d/S99loadmodule-rc
+-	
++
