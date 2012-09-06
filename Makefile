@@ -139,3 +139,5 @@ install:
 	cp $(CMEM_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/src/module/cmemk.ko $(DVSDK_TARGET_DIR)
 	cp $(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/sdma/src/module/sdmak.ko $(DVSDK_TARGET_DIR)
 	cp $(CODEC_INSTALL_DIR)/packages/ti/sdo/server/cs/bin/cs.x64P $(DVSDK_TARGET_DIR)
+	cp run.sh $(DVSDK_TARGET_DIR)
+	cp RedGrassBelowAGreenSky.mp3 $(DVSDK_TARGET_DIR)
